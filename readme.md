@@ -41,13 +41,18 @@ All entities go `unavailable` when the WebSocket drops; the integration reconnec
 
 ## Install
 
-**HACS (recommended):** HACS → ⋮ (top right) → *Custom repositories* → add
-`https://github.com/stmoha/ha-ncsender` as type *Integration* → search "ncSender" → Download → restart HA.
+[![Open your Home Assistant instance and open this repository inside HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=stmoha&repository=ha-ncsender&category=integration)
 
-**Manual:** copy `custom_components/ncsender/` into `/config/custom_components/` and restart HA.
+1. Click the button above (or in HACS: ⋮ → *Custom repositories* → add
+   `https://github.com/stmoha/ha-ncsender`, type *Integration*), then **Download**.
+2. Restart Home Assistant.
+3. Add the integration:
 
-Then **Settings → Devices & services → Add integration → ncSender**, enter the host
-(e.g. `ncsender.local` or the Pi's IP) and port `8090`.
+   [![Open your Home Assistant instance and start setting up ncSender.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=ncsender)
+
+   Enter the host/IP of the machine running ncSender and port `8090`.
+
+**Manual alternative:** copy `custom_components/ncsender/` into `/config/custom_components/` and restart.
 
 ## Migrating from the MQTT bridge
 
