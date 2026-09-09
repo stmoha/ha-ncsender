@@ -1,0 +1,122 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Connect to ncSender",
+        "description": "Enter the address of the machine running ncSender (the embedded server, port 8090 by default).",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "name": "Device name",
+          "laser_max_s": "Laser S-value maximum"
+        },
+        "data_description": {
+          "laser_max_s": "Highest S value your laser accepts (e.g. 1000). Spindle commands above this are treated as the VFD spindle; at or below with no RPM feedback are treated as the laser."
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Could not reach ncSender at that address. Check the host, port, and that ncSender is running."
+    },
+    "abort": {
+      "already_configured": "This ncSender is already configured."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ncSender options",
+        "data": {
+          "laser_max_s": "Laser S-value maximum"
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "machine_state": {
+        "name": "Machine State"
+      },
+      "sender_status": {
+        "name": "Sender Status"
+      },
+      "active_output": {
+        "name": "Active Output"
+      },
+      "job_status": {
+        "name": "Job Status"
+      },
+      "job_file": {
+        "name": "Job File"
+      },
+      "job_progress": {
+        "name": "Job Progress"
+      },
+      "job_remaining": {
+        "name": "Job Time Remaining"
+      },
+      "spindle_rpm": {
+        "name": "Spindle RPM"
+      },
+      "feed_rate": {
+        "name": "Feed Rate"
+      },
+      "laser_power": {
+        "name": "Laser Power"
+      },
+      "last_error": {
+        "name": "Last Error"
+      },
+      "workspace": {
+        "name": "Workspace"
+      },
+      "current_tool": {
+        "name": "Current Tool"
+      }
+    },
+    "binary_sensor": {
+      "controller_connected": {
+        "name": "Controller Connected"
+      },
+      "spindle": {
+        "name": "Spindle"
+      },
+      "laser": {
+        "name": "Laser"
+      },
+      "flood_coolant": {
+        "name": "Flood Coolant"
+      },
+      "mist_coolant": {
+        "name": "Mist Coolant"
+      }
+    },
+    "button": {
+      "pause": {
+        "name": "Pause Job"
+      },
+      "resume": {
+        "name": "Resume Job"
+      },
+      "stop": {
+        "name": "Stop Job"
+      }
+    }
+  },
+  "services": {
+    "send_command": {
+      "name": "Send command",
+      "description": "Send a raw G-code or realtime command to ncSender.",
+      "fields": {
+        "command": {
+          "name": "Command",
+          "description": "Command text as typed in the ncSender terminal."
+        },
+        "entry_id": {
+          "name": "Config entry",
+          "description": "Only needed with multiple ncSender entries."
+        }
+      }
+    }
+  }
+}

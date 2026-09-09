@@ -1,0 +1,18 @@
+send_command:
+  name: Send command
+  description: Send a raw G-code or realtime command to ncSender (e.g. M8, M9, M64 P1, $X).
+  fields:
+    command:
+      name: Command
+      description: The command text exactly as you would type it in the ncSender terminal.
+      required: true
+      example: "M8"
+      selector:
+        text:
+    entry_id:
+      name: Config entry
+      description: Only needed if more than one ncSender is configured.
+      required: false
+      selector:
+        config_entry:
+          integration: ncsender
