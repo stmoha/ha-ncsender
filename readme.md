@@ -54,18 +54,6 @@ All entities go `unavailable` when the WebSocket drops; the integration reconnec
 
 **Manual alternative:** copy `custom_components/ncsender/` into `/config/custom_components/` and restart.
 
-## Migrating from the MQTT bridge
-
-Entity IDs are identical to the bridge's, so automations carry over unchanged —
-**but** stop the bridge and delete its MQTT device *before* adding this integration,
-or HA will suffix the new entities with `_2` to avoid a clash:
-
-```bash
-sudo systemctl disable --now ncsender-mqtt-bridge
-```
-
-Then in HA: Settings → Devices & services → MQTT → ncSender device → ⋮ → Delete.
-
 ## Icon
 
 Brand images ship inside the integration (`custom_components/ncsender/brand/`, HA 2026.3+):
