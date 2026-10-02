@@ -18,7 +18,9 @@ from .const import (
     ATTR_COMMAND,
     ATTR_ENTRY_ID,
     CONF_LASER_MAX_S,
+    CONF_TELEMETRY_INTERVAL,
     DEFAULT_LASER_MAX_S,
+    DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
     SERVICE_SEND_COMMAND,
 )
@@ -44,6 +46,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NcSenderConfigEntry) -> 
         entry.data[CONF_HOST],
         entry.data[CONF_PORT],
         entry.options.get(CONF_LASER_MAX_S, entry.data.get(CONF_LASER_MAX_S, DEFAULT_LASER_MAX_S)),
+        entry.options.get(CONF_TELEMETRY_INTERVAL, DEFAULT_TELEMETRY_INTERVAL),
     )
     if not await client.async_test_connection():
         raise ConfigEntryNotReady(

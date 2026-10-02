@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any
 
 from homeassistant.components.sensor import (
@@ -107,6 +108,13 @@ SENSORS: tuple[NcSenderSensorDescription, ...] = (
         icon="mdi:tools",
         attributes_key="tool_attributes",
     ),
+    NcSenderSensorDescription(
+        key="tool_change",
+        translation_key="tool_change",
+        icon="mdi:swap-horizontal",
+        device_class=SensorDeviceClass.TIMESTAMP,
+        attributes_key="tool_change_attributes",
+    ),
 )
 
 DEFAULT_AXES = "XYZ"
@@ -121,8 +129,7 @@ def _position_description(frame: str, letter: str) -> NcSenderSensorDescription:
         icon="mdi:axis-arrow",
         native_unit_of_measurement=UnitOfLength.MILLIMETERS,
         device_class=SensorDeviceClass.DISTANCE,
-        state_class=SensorStateClass.MEASUREMENT,
-        suggested_display_precision=3,
+        suggested_display_precision=2,
     )
 
 
@@ -170,7 +177,10 @@ class NcSenderSensor(NcSenderEntity, SensorEntity):
 
     @property
     def native_value(self) -> Any:
-        return self.client.data.get(self._key)
+        value = self.client.data.get(self._key)
+        if self.entity_description.device_class == SensorDeviceClass.TIMESTAMP and isinstance(value, str):
+            return datetime.fromisoformat(value)
+        return value
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:

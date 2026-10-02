@@ -20,11 +20,12 @@ import json
 import logging
 import re
 import time
+from datetime import datetime, timezone
 from typing import Any
 
 import aiohttp
 
-from .const import SOURCE_ID, TELEMETRY_MIN_INTERVAL
+from .const import DEFAULT_TELEMETRY_INTERVAL, SOURCE_ID
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -46,12 +47,21 @@ IMMEDIATE_KEYS = frozenset(
         "alarm",
         "workspace",
         "workspace_attributes",
+        "tool_change",
+        "tool_change_attributes",
         "tool",
         "tool_attributes",
     }
 )
 
 _M_CODE = re.compile(r"(?<![A-Za-z0-9.])M0*(\d+)(?!\d)", re.IGNORECASE)
+_T_WORD = re.compile(r"(?<![A-Za-z])T\s*0*(\d+)", re.IGNORECASE)
+
+
+def _q(value: float, step: float) -> float | int:
+    """Quantize to a step; integers for whole steps."""
+    q = round(value / step) * step
+    return int(q) if float(step).is_integer() else round(q, 1)
 
 
 class NcSenderClient:
@@ -63,6 +73,7 @@ class NcSenderClient:
         host: str,
         port: int,
         laser_max_s: float,
+        telemetry_interval: float = DEFAULT_TELEMETRY_INTERVAL,
     ) -> None:
         self._session = session
         self.host = host
@@ -70,6 +81,7 @@ class NcSenderClient:
         self.base_url = f"http://{host}:{port}"
         self.ws_url = f"ws://{host}:{port}/?product={SOURCE_ID}"
         self.laser_max_s = float(laser_max_s)
+        self.telemetry_interval = float(telemetry_interval)
 
         self.connected = False
         self.state: dict[str, Any] = {}  # mirrored raw ServerState
@@ -77,6 +89,7 @@ class NcSenderClient:
         self.coolant: dict[str, bool | None] = {"flood": None, "mist": None}
         self._alarm: str | None = None
         self.tools: list[dict[str, Any]] = []
+        self.last_tool_change: dict[str, Any] | None = None  # set on each acknowledged M6
 
         self._listeners: set[Callable[[], None]] = set()
         self._task: asyncio.Task | None = None
@@ -186,10 +199,9 @@ class NcSenderClient:
             self._publish()
         elif mtype == "cnc-command-result" and isinstance(payload, dict):
             if payload.get("status") == "success":
-                self._track_coolant_command(
-                    str(payload.get("command") or ""),
-                    str(payload.get("displayCommand") or ""),
-                )
+                command = str(payload.get("command") or "")
+                self._track_coolant_command(command, str(payload.get("displayCommand") or ""))
+                self._track_tool_change_command(command)
                 self._publish()
         elif mtype == "cnc-error":
             self._alarm = payload if isinstance(payload, str) else json.dumps(payload)
@@ -236,6 +248,20 @@ class NcSenderClient:
             elif code in (9, 2, 30):
                 self.coolant["flood"] = False
                 self.coolant["mist"] = False
+
+    def _track_tool_change_command(self, command: str) -> None:
+        """Record each acknowledged M6 — fires before the swap, independent of
+        how the sender or an ATC plugin tracks tool-change state afterwards."""
+        if not any(int(m.group(1)) == 6 for m in _M_CODE.finditer(command)):
+            return
+        t = _T_WORD.search(command)
+        requested = int(t.group(1)) if t else None
+        self.last_tool_change = {
+            "at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "requested_tool": requested,
+            "previous_tool": (self.state.get("machineState") or {}).get("tool"),
+            "command": command.strip(),
+        }
 
     # ------------------------------------------------------------------ derivation
     @staticmethod
@@ -321,19 +347,17 @@ class NcSenderClient:
                 "tool_changing": ms.get("isToolChanging"),
                 "pockets": pockets,
             },
-            "spindle_rpm": round(rpm_actual),
-            "spindle_rpm_target": round(rpm_target),
-            "feed_rate": round(float(ms.get("feedRate") or 0)),
+            # Telemetry is quantized: RPM/feed to 10s, positions to 0.01 mm,
+            # so sensor jitter doesn't generate recorder rows.
+            "tool_change": (self.last_tool_change or {}).get("at"),
+            "tool_change_attributes": self.last_tool_change or {},
+            "spindle_rpm": _q(rpm_actual, 10),
+            "spindle_rpm_target": _q(rpm_target, 10),
+            "feed_rate": _q(float(ms.get("feedRate") or 0), 10),
             "machine_attributes": {
                 "homed": ms.get("homed"),
                 "workspace": ms.get("workspace"),
                 "tool": ms.get("tool"),
-                "mpos_x": axis(mpos, 0),
-                "mpos_y": axis(mpos, 1),
-                "mpos_z": axis(mpos, 2),
-                "wpos_x": axis(wpos, 0),
-                "wpos_y": axis(wpos, 1),
-                "wpos_z": axis(wpos, 2),
                 "feed_override": ms.get("feedrateOverride"),
                 "rapid_override": ms.get("rapidOverride"),
                 "spindle_override": ms.get("spindleOverride"),
@@ -342,9 +366,9 @@ class NcSenderClient:
         }
 
         for letter, value in by_axis(mpos).items():
-            snap[f"mpos_{letter}"] = value
+            snap[f"mpos_{letter}"] = None if value is None else round(value, 2)
         for letter, value in by_axis(wpos).items():
-            snap[f"wpos_{letter}"] = value
+            snap[f"wpos_{letter}"] = None if value is None else round(value, 2)
 
         if job:
             rem = job.get("remainingSec")
@@ -352,8 +376,8 @@ class NcSenderClient:
                 {
                     "job_status": str(job.get("status") or "loaded"),
                     "job_file": str(job.get("filename") or "none"),
-                    "job_progress": round(float(job.get("progressPercent") or 0), 1),
-                    "job_remaining": round(float(rem)) if rem is not None else 0,
+                    "job_progress": _q(float(job.get("progressPercent") or 0), 0.5),
+                    "job_remaining": _q(float(rem), 10) if rem is not None else 0,
                     "job_attributes": {
                         "current_line": job.get("currentLine"),
                         "total_lines": job.get("totalLines"),
@@ -379,7 +403,7 @@ class NcSenderClient:
         snap = self._snapshot()
         immediate_changed = any(snap.get(k) != self.data.get(k) for k in IMMEDIATE_KEYS)
         now = time.monotonic()
-        if force or immediate_changed or (now - self._last_push) >= TELEMETRY_MIN_INTERVAL:
+        if force or immediate_changed or (now - self._last_push) >= self.telemetry_interval:
             self._cancel_flush()
             self._last_push = now
             if snap != self.data:
@@ -387,7 +411,7 @@ class NcSenderClient:
                 self._notify()
             return
         if snap != self.data:
-            self._schedule_flush(TELEMETRY_MIN_INTERVAL - (now - self._last_push))
+            self._schedule_flush(self.telemetry_interval - (now - self._last_push))
 
     def _schedule_flush(self, delay: float) -> None:
         if self._flush_handle is not None:

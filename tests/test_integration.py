@@ -41,6 +41,7 @@ async def test_full_flow(hass, fake_ncsender):
         {"host": "127.0.0.1", "port": 18091, "name": "ncSender", "laser_max_s": 1000})
     assert result["type"] is FlowResultType.CREATE_ENTRY, result
     entry = result["result"]
+    hass.config_entries.async_update_entry(entry, options={**entry.options, "telemetry_interval": 1})
     await hass.async_block_till_done()
     await asyncio.sleep(0.3)  # let the WS connect and full state land
 
@@ -53,7 +54,7 @@ async def test_full_flow(hass, fake_ncsender):
                           ("sensor.ncsender_active_output", "off")]:
         st = hass.states.get(eid); assert st is not None, f"{eid} missing: {[s.entity_id for s in hass.states.async_all()]}"
         assert st.state == expected, (eid, st.state)
-    assert hass.states.get("sensor.ncsender_machine_state").attributes["mpos_x"] == 1.0
+    assert "mpos_x" not in hass.states.get("sensor.ncsender_machine_state").attributes  # no duplicate churn
     # positions: static XYZ + dynamic A axis, mm with distance device class
     assert hass.states.get("sensor.ncsender_machine_x").state == "1.0"
     assert hass.states.get("sensor.ncsender_work_x").state == "0.5"
@@ -79,13 +80,23 @@ async def test_full_flow(hass, fake_ncsender):
     assert hass.states.get("sensor.ncsender_current_tool").attributes["name"] == "1/4 Endmill"
     await send("tools-updated", [{"id":1,"toolId":101,"toolNumber":1,"name":"Renamed Endmill"}])
     assert hass.states.get("sensor.ncsender_current_tool").attributes["name"] == "Renamed Endmill"
+    # M6 tool change: timestamp sensor updates with requested/previous tool
+    assert hass.states.get("sensor.ncsender_tool_change").state == "unknown"
+    await send("cnc-command-result", {"command":"T1 M6","status":"success"})
+    tc = hass.states.get("sensor.ncsender_tool_change")
+    assert tc.state not in ("unknown", "unavailable"), tc.state
+    assert tc.attributes["requested_tool"] == 1 and tc.attributes["previous_tool"] == 1
+    await send("cnc-command-result", {"command":"M06 T5","status":"success"})
+    assert hass.states.get("sensor.ncsender_tool_change").attributes["requested_tool"] == 5
+    await send("cnc-command-result", {"command":"G1 X10 M60","status":"success"})  # not M6
+    assert hass.states.get("sensor.ncsender_tool_change").attributes["requested_tool"] == 5
     await send("cnc-command-result", {"command":"M8","status":"success"})
     assert hass.states.get("binary_sensor.ncsender_flood_coolant").state == "on"
     await send("server-state-updated", {'machineState':{'spindleActive':True,'spindleRpmTarget':800,'spindleRpmActual':0}})
     assert hass.states.get("binary_sensor.ncsender_laser").state == "on"
     assert hass.states.get("sensor.ncsender_laser_power").state == "80.0"
     await asyncio.sleep(1.2); await hass.async_block_till_done()
-    assert hass.states.get("sensor.ncsender_job_progress").state == "42.3"
+    assert hass.states.get("sensor.ncsender_job_progress").state == "42.5"   # quantized to 0.5 %
 
     # controls: service + button
     await hass.services.async_call(DOMAIN, "send_command", {"command": "M9"}, blocking=True)

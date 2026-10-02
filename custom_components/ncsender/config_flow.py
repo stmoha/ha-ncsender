@@ -14,12 +14,18 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .client import NcSenderClient
 from .const import (
     CONF_LASER_MAX_S,
+    CONF_TELEMETRY_INTERVAL,
     DEFAULT_HOST,
     DEFAULT_LASER_MAX_S,
     DEFAULT_NAME,
     DEFAULT_PORT,
+    DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
+    MAX_TELEMETRY_INTERVAL,
+    MIN_TELEMETRY_INTERVAL,
 )
+
+INTERVAL_SCHEMA = vol.All(vol.Coerce(int), vol.Range(min=MIN_TELEMETRY_INTERVAL, max=MAX_TELEMETRY_INTERVAL))
 
 USER_SCHEMA = vol.Schema(
     {
@@ -57,7 +63,10 @@ class NcSenderConfigFlow(ConfigFlow, domain=DOMAIN):
                         CONF_PORT: port,
                         CONF_NAME: user_input[CONF_NAME],
                     },
-                    options={CONF_LASER_MAX_S: user_input[CONF_LASER_MAX_S]},
+                    options={
+                        CONF_LASER_MAX_S: user_input[CONF_LASER_MAX_S],
+                        CONF_TELEMETRY_INTERVAL: DEFAULT_TELEMETRY_INTERVAL,
+                    },
                 )
             errors["base"] = "cannot_connect"
 
@@ -82,10 +91,18 @@ class NcSenderOptionsFlow(OptionsFlow):
         if user_input is not None:
             return self.async_create_entry(data=user_input)
 
-        current = self.config_entry.options.get(CONF_LASER_MAX_S, DEFAULT_LASER_MAX_S)
+        opts = self.config_entry.options
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(
-                {vol.Required(CONF_LASER_MAX_S, default=current): int}
+                {
+                    vol.Required(
+                        CONF_LASER_MAX_S, default=opts.get(CONF_LASER_MAX_S, DEFAULT_LASER_MAX_S)
+                    ): int,
+                    vol.Required(
+                        CONF_TELEMETRY_INTERVAL,
+                        default=opts.get(CONF_TELEMETRY_INTERVAL, DEFAULT_TELEMETRY_INTERVAL),
+                    ): INTERVAL_SCHEMA,
+                }
             ),
         )
