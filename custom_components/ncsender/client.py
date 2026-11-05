@@ -430,12 +430,23 @@ class NcSenderClient:
 
     # ------------------------------------------------------------------ control
     async def _post(self, path: str, body: dict[str, Any] | None = None) -> None:
-        async with self._session.post(
-            f"{self.base_url}{path}", json=body, timeout=aiohttp.ClientTimeout(total=10)
-        ) as resp:
-            if resp.status >= 400:
-                text = await resp.text()
-                raise NcSenderError(f"{path} -> {resp.status}: {text[:200]}")
+        """POST to ncSender; every failure surfaces as NcSenderError so callers
+        (buttons, the send_command service) can show a clean message."""
+        try:
+            async with self._session.post(
+                f"{self.base_url}{path}", json=body, timeout=aiohttp.ClientTimeout(total=10)
+            ) as resp:
+                if resp.status >= 400:
+                    text = await resp.text()
+                    raise NcSenderError(f"ncSender rejected {path} ({resp.status}): {text[:200]}")
+        except asyncio.TimeoutError as err:
+            raise NcSenderError(
+                f"Timed out contacting ncSender at {self.host}:{self.port}"
+            ) from err
+        except aiohttp.ClientError as err:
+            raise NcSenderError(
+                f"Cannot reach ncSender at {self.host}:{self.port}: {err}"
+            ) from err
 
     async def async_send_command(self, command: str) -> None:
         await self._post("/api/send-command", {"command": command, "sourceId": SOURCE_ID})
