@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.2 — 2026-11-04
+- Connection failures and timeouts on control requests (Pause/Resume/Stop buttons, `send_command`
+  action) now surface as a clean Home Assistant error instead of a raw traceback. Thanks to
+  @frenck for the review note during HACS default-store inclusion.
+
 ## 0.3.1 — 2026-10-01
 - New `sensor.ncsender_tool_change` (timestamp): updates on every acknowledged **M6**, before the
   swap happens. Attributes: `requested_tool`, `previous_tool`, `command`. Trigger automations on
