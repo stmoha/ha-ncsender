@@ -1,0 +1,159 @@
+blueprint:
+  name: ncSender – Job alerts
+  description: >-
+    Phone notifications from the Home Assistant Companion app:
+
+    - **Job finished** (completed, stopped or error) with the file name and run time
+
+    - **Tool change**: which tool to load (from each acknowledged M6)
+
+    - **Alarm** or **controller disconnected**
+
+
+    Turn off any alert you don't want.
+  domain: automation
+  source_url: https://github.com/stmoha/ha-ncsender/blob/main/blueprints/automation/ncsender/job_alerts.yaml
+  input:
+    notify_device:
+      name: Phone
+      description: The device running the Home Assistant Companion app.
+      selector:
+        device:
+          filter:
+            - integration: mobile_app
+    alert_finished:
+      name: Job finished alert
+      default: true
+      selector:
+        boolean:
+    alert_tool_change:
+      name: Tool change alert
+      default: true
+      selector:
+        boolean:
+    alert_alarm:
+      name: Alarm / disconnect alert
+      default: true
+      selector:
+        boolean:
+    ncsender:
+      name: ncSender entities
+      description: Leave as-is unless you renamed the ncSender device.
+      collapsed: true
+      input:
+        job_status:
+          name: Job status
+          default: sensor.ncsender_job_status
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        job_file:
+          name: Job file
+          default: sensor.ncsender_job_file
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        machine_state:
+          name: Machine state
+          default: sensor.ncsender_machine_state
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        last_error:
+          name: Last error
+          default: sensor.ncsender_last_error
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        tool_change:
+          name: Tool change
+          default: sensor.ncsender_tool_change
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        controller_connected:
+          name: Controller connected
+          default: binary_sensor.ncsender_controller_connected
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: binary_sensor
+
+mode: queued
+
+triggers:
+  - trigger: state
+    entity_id: !input job_status
+    from: running
+    to: [completed, stopped, error]
+    id: finished
+  - trigger: state
+    entity_id: !input tool_change
+    id: tool_change
+  - trigger: state
+    entity_id: !input machine_state
+    to: Alarm
+    id: alarm
+  - trigger: state
+    entity_id: !input controller_connected
+    from: "on"
+    to: "off"
+    for:
+      seconds: 10
+    id: disconnect
+
+variables:
+  job_status: !input job_status
+  job_file: !input job_file
+  last_error: !input last_error
+  tool_change: !input tool_change
+  alert_finished: !input alert_finished
+  alert_tool_change: !input alert_tool_change
+  alert_alarm: !input alert_alarm
+  err: "{{ states(last_error) }}"
+  has_err: "{{ err not in ['unknown', 'unavailable', 'none', ''] }}"
+
+actions:
+  - choose:
+      - conditions: "{{ trigger.id == 'finished' and alert_finished }}"
+        sequence:
+          - device_id: !input notify_device
+            domain: mobile_app
+            type: notify
+            title: "CNC job {{ trigger.to_state.state }}"
+            message: >-
+              {{ states(job_file) }} – {{ (state_attr(job_status, 'runtime_sec') | int(0) / 60) | round(1) }} min
+              {%- if trigger.to_state.state == 'error' and has_err %}. Error: {{ err }}{% endif %}
+      - conditions: >-
+          {{ trigger.id == 'tool_change' and alert_tool_change
+             and trigger.from_state is not none
+             and trigger.from_state.state not in ['unavailable', 'unknown']
+             and trigger.to_state.state not in ['unavailable', 'unknown'] }}
+        sequence:
+          - device_id: !input notify_device
+            domain: mobile_app
+            type: notify
+            title: Tool change
+            message: >-
+              Load T{{ state_attr(tool_change, 'requested_tool') }}
+              (was T{{ state_attr(tool_change, 'previous_tool') }})
+      - conditions: "{{ trigger.id in ['alarm', 'disconnect'] and alert_alarm }}"
+        sequence:
+          - device_id: !input notify_device
+            domain: mobile_app
+            type: notify
+            title: CNC needs attention
+            message: >-
+              {% if trigger.id == 'alarm' %}Machine in Alarm.{% if has_err %} Last error: {{ err }}{% endif %}
+              {%- else %}Controller disconnected from ncSender.{% endif %}
