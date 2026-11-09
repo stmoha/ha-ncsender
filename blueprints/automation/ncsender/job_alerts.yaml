@@ -3,7 +3,8 @@ blueprint:
   description: >-
     Phone notifications from the Home Assistant Companion app:
 
-    - **Job finished** (completed, stopped or error) with the file name and run time
+    - **Job finished** (completed, stopped or error) with the file name and run time,
+    optionally only for jobs longer than a few minutes
 
     - **Tool change**: which tool to load (from each acknowledged M6)
 
@@ -26,6 +27,16 @@ blueprint:
       default: true
       selector:
         boolean:
+    min_job_minutes:
+      name: Only for jobs longer than
+      description: Skip the job finished alert for jobs shorter than this (0 = alert for every job). Tool change and alarm alerts always fire.
+      default: 0
+      selector:
+        number:
+          min: 0
+          max: 600
+          unit_of_measurement: min
+          mode: box
     alert_tool_change:
       name: Tool change alert
       default: true
@@ -119,6 +130,7 @@ variables:
   last_error: !input last_error
   tool_change: !input tool_change
   alert_finished: !input alert_finished
+  min_job_minutes: !input min_job_minutes
   alert_tool_change: !input alert_tool_change
   alert_alarm: !input alert_alarm
   err: "{{ states(last_error) }}"
@@ -126,7 +138,9 @@ variables:
 
 actions:
   - choose:
-      - conditions: "{{ trigger.id == 'finished' and alert_finished }}"
+      - conditions: >-
+          {{ trigger.id == 'finished' and alert_finished
+             and trigger.to_state.attributes.runtime_sec | int(0) > min_job_minutes * 60 }}
         sequence:
           - device_id: !input notify_device
             domain: mobile_app

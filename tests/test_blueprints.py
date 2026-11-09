@@ -99,6 +99,22 @@ async def test_job_alerts(hass, bp):
     assert sent[-1]["message"] == "Load T4 (was T3)"
     await _set(hass, MS, "Alarm")
     assert sent[-1]["title"] == "CNC needs attention" and sent[-1]["message"] == "Machine in Alarm."
+
+    # Minimum job length: a 5-minute job is skipped, a 15-minute job alerts.
+    cfg2 = bp("job_alerts")
+    cfg2["use_blueprint"]["input"] = {"notify_device": phone.id, "min_job_minutes": 10,
+                                      "alert_tool_change": False, "alert_alarm": False}
+    await hass.services.async_call("automation", "turn_off", {"entity_id": "automation.alerts"}, blocking=True)
+    assert await async_setup_component(hass, "automation", {})
+    from homeassistant.components.automation import DOMAIN as AUTOMATION
+    with patch("homeassistant.config.load_yaml_config_file",
+               return_value={AUTOMATION: [cfg2 | {"id": "long", "alias": "long"}]}):
+        await hass.services.async_call(AUTOMATION, "reload", blocking=True)
+    count = len(sent)
+    await _set(hass, JOB, "running", {"runtime_sec": 0}); await _set(hass, JOB, "completed", {"runtime_sec": 300})
+    assert len(sent) == count
+    await _set(hass, JOB, "running", {"runtime_sec": 0}); await _set(hass, JOB, "completed", {"runtime_sec": 900})
+    assert len(sent) == count + 1 and sent[-1]["message"] == "sign.nc – 15.0 min"
     stack.close()
 
 
