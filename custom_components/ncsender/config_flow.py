@@ -14,10 +14,12 @@ from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from .client import NcSenderClient
 from .const import (
     CONF_LASER_MAX_S,
+    CONF_OUTPUT_PINS,
     CONF_TELEMETRY_INTERVAL,
     DEFAULT_HOST,
     DEFAULT_LASER_MAX_S,
     DEFAULT_NAME,
+    DEFAULT_OUTPUT_PINS,
     DEFAULT_PORT,
     DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
@@ -103,6 +105,10 @@ class NcSenderOptionsFlow(OptionsFlow):
                         CONF_TELEMETRY_INTERVAL,
                         default=opts.get(CONF_TELEMETRY_INTERVAL, DEFAULT_TELEMETRY_INTERVAL),
                     ): INTERVAL_SCHEMA,
+                    vol.Optional(
+                        CONF_OUTPUT_PINS,
+                        default=opts.get(CONF_OUTPUT_PINS, DEFAULT_OUTPUT_PINS),
+                    ): str,
                 }
             ),
         )
