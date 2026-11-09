@@ -60,7 +60,7 @@ def test_blueprints_parse():
         assert blueprint.metadata["source_url"].endswith(f.name)
 
 
-async def test_job_alerts(hass, bp):
+async def test_job_alerts(hass, bp, freezer):
     from homeassistant.helpers import device_registry as dr
     from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -82,6 +82,7 @@ async def test_job_alerts(hass, bp):
     await _set(hass, "sensor.ncsender_tool_change", "2026-01-01T00:00:00+00:00",
                {"requested_tool": 3, "previous_tool": 1})
     await _set(hass, CONN, "on")
+    await _set(hass, TOOL, "1", {"tool_changing": False}); await _set(hass, "sensor.ncsender_sender_status", "running")
     cfg = bp("job_alerts")
     cfg["use_blueprint"]["input"] = {"notify_device": phone.id}
     await _setup(hass, [cfg | {"id": "alerts", "alias": "alerts"}])
@@ -94,9 +95,21 @@ async def test_job_alerts(hass, bp):
     stack.enter_context(patch(f"{da}.get_notify_service", return_value="mobile_app_phone"))
     await _set(hass, JOB, "completed", {"runtime_sec": 300})
     assert sent[-1]["title"] == "CNC job completed" and sent[-1]["message"] == "sign.nc – 5.0 min"
-    await _set(hass, "sensor.ncsender_tool_change", "2026-01-01T00:05:00+00:00",
-               {"requested_tool": 4, "previous_tool": 3})
-    assert sent[-1]["message"] == "Load T4 (was T3)"
+    # Tool change: a quick swap sends nothing; one still going after 60 s alerts once.
+    from homeassistant.util import dt as dt_util
+    await _set(hass, "sensor.ncsender_tool_change", dt_util.utcnow().isoformat(), {"requested_tool": 4})
+    count = len(sent)
+    await _set(hass, TOOL, "1", {"tool_changing": True}); await _set(hass, "sensor.ncsender_sender_status", "tool-changing")
+    freezer.tick(timedelta(seconds=20)); async_fire_time_changed(hass); await hass.async_block_till_done()
+    await _set(hass, TOOL, "4", {"tool_changing": False}); await _set(hass, "sensor.ncsender_sender_status", "running")
+    freezer.tick(timedelta(seconds=60)); async_fire_time_changed(hass); await hass.async_block_till_done()
+    assert len(sent) == count
+    await _set(hass, TOOL, "4", {"tool_changing": True}); await _set(hass, "sensor.ncsender_sender_status", "tool-changing")
+    freezer.tick(timedelta(seconds=61)); async_fire_time_changed(hass); await hass.async_block_till_done()
+    assert len(sent) == count + 1                       # both signals on, still one alert
+    assert sent[-1]["title"] == "Tool change waiting"
+    assert sent[-1]["message"] == "Load T4. The tool change hasn't finished after 60 s."
+    await _set(hass, TOOL, "4", {"tool_changing": False}); await _set(hass, "sensor.ncsender_sender_status", "running")
     await _set(hass, MS, "Alarm")
     assert sent[-1]["title"] == "CNC needs attention" and sent[-1]["message"] == "Machine in Alarm."
 
