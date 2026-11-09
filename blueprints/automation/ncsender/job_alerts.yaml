@@ -6,7 +6,8 @@ blueprint:
     - **Job finished** (completed, stopped or error) with the file name and run time,
     optionally only for jobs longer than a few minutes
 
-    - **Tool change**: which tool to load (from each acknowledged M6)
+    - **Tool change** that hasn't finished after a minute (quick automatic swaps stay quiet),
+    with the tool to load
 
     - **Alarm** or **controller disconnected**
 
@@ -29,7 +30,7 @@ blueprint:
         boolean:
     min_job_minutes:
       name: Only for jobs longer than
-      description: Skip the job finished alert for jobs shorter than this (0 = alert for every job). Tool change and alarm alerts always fire.
+      description: Skip the job finished alert for jobs shorter than this (0 = alert for every job). Tool change and alarm alerts are not affected.
       default: 0
       selector:
         number:
@@ -42,6 +43,19 @@ blueprint:
       default: true
       selector:
         boolean:
+    tool_change_wait:
+      name: Tool change alert after
+      description: >-
+        Only alert when a tool change is still in progress after this many seconds, so quick
+        ATC swaps (or ones you handle at the machine) don't send anything. 0 = alert as soon as a
+        tool change starts.
+      default: 60
+      selector:
+        number:
+          min: 0
+          max: 3600
+          unit_of_measurement: s
+          mode: box
     alert_alarm:
       name: Alarm / disconnect alert
       default: true
@@ -85,8 +99,24 @@ blueprint:
                 - integration: ncsender
                   domain: sensor
         tool_change:
-          name: Tool change
+          name: Tool change (last M6)
           default: sensor.ncsender_tool_change
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        current_tool:
+          name: Current tool
+          default: sensor.ncsender_current_tool
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        sender_status:
+          name: Sender status
+          default: sensor.ncsender_sender_status
           selector:
             entity:
               filter:
@@ -103,14 +133,24 @@ blueprint:
 
 mode: queued
 
+trigger_variables:
+  current_tool_entity: !input current_tool
+  sender_status_entity: !input sender_status
+
 triggers:
   - trigger: state
     entity_id: !input job_status
     from: running
     to: [completed, stopped, error]
     id: finished
-  - trigger: state
-    entity_id: !input tool_change
+  # A tool change in progress: the current tool's tool_changing flag or ncSender's own
+  # "tool-changing" status (either one, so ATC plugins that only set one still work).
+  - trigger: template
+    value_template: >-
+      {{ state_attr(current_tool_entity, 'tool_changing') == true
+         or is_state(sender_status_entity, 'tool-changing') }}
+    for:
+      seconds: !input tool_change_wait
     id: tool_change
   - trigger: state
     entity_id: !input machine_state
@@ -132,8 +172,14 @@ variables:
   alert_finished: !input alert_finished
   min_job_minutes: !input min_job_minutes
   alert_tool_change: !input alert_tool_change
+  tool_change_wait: !input tool_change_wait
   alert_alarm: !input alert_alarm
   err: "{{ states(last_error) }}"
+  # Tool number from the last M6, if it was recent.
+  recent_m6: >-
+    {{ states(tool_change) not in ['unknown', 'unavailable']
+       and (now() - as_datetime(states(tool_change))).total_seconds() < 600 }}
+  next_tool: "{{ state_attr(tool_change, 'requested_tool') if recent_m6 else none }}"
   has_err: "{{ err not in ['unknown', 'unavailable', 'none', ''] }}"
 
 actions:
@@ -149,19 +195,16 @@ actions:
             message: >-
               {{ states(job_file) }} – {{ (state_attr(job_status, 'runtime_sec') | int(0) / 60) | round(1) }} min
               {%- if trigger.to_state.state == 'error' and has_err %}. Error: {{ err }}{% endif %}
-      - conditions: >-
-          {{ trigger.id == 'tool_change' and alert_tool_change
-             and trigger.from_state is not none
-             and trigger.from_state.state not in ['unavailable', 'unknown']
-             and trigger.to_state.state not in ['unavailable', 'unknown'] }}
+      - conditions: "{{ trigger.id == 'tool_change' and alert_tool_change }}"
         sequence:
           - device_id: !input notify_device
             domain: mobile_app
             type: notify
-            title: Tool change
+            title: Tool change waiting
             message: >-
-              Load T{{ state_attr(tool_change, 'requested_tool') }}
-              (was T{{ state_attr(tool_change, 'previous_tool') }})
+              {{ 'Load T' ~ next_tool ~ '. ' if next_tool is not none else '' -}}
+              The tool change hasn't finished
+              {%- if tool_change_wait > 0 %} after {{ tool_change_wait }} s{% endif %}.
       - conditions: "{{ trigger.id in ['alarm', 'disconnect'] and alert_alarm }}"
         sequence:
           - device_id: !input notify_device
