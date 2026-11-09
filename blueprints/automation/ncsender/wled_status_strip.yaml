@@ -1,0 +1,225 @@
+blueprint:
+  name: ncSender – WLED status strip
+  description: >-
+    Shows the machine state on a WLED LED strip, using the same colors as the official
+    ncSender RGB LED plugin: red alarm, orange door, magenta tool change, amber hold,
+    blue homing, green running/jogging, white idle.
+
+
+    While a job is active the status LEDs become a **progress bar** in the current status
+    color: full brightness up to the progress %, dim above it. Fireworks play for a few
+    seconds when a job finishes, and the strip turns off after the machine has been idle
+    for a while.
+
+
+    **Needs the `rest_command.ncsender_wled` snippet in configuration.yaml.** See
+    examples/wled-status-strip.md in the ha-ncsender repository for the snippet, parts
+    and wiring. Uses WLED segment 0 for the status LEDs, so other segments stay free for
+    equipment indicators (see the "WLED equipment indicator" blueprint).
+  domain: automation
+  source_url: https://github.com/stmoha/ha-ncsender/blob/main/blueprints/automation/ncsender/wled_status_strip.yaml
+  input:
+    wled_light:
+      name: WLED light
+      description: The WLED device's main light entity (used to redraw the strip after it reboots).
+      selector:
+        entity:
+          filter:
+            - integration: wled
+              domain: light
+    wled_host:
+      name: WLED address
+      description: IP address or hostname of the WLED controller (reserve the IP in your router).
+      selector:
+        text:
+    status_leds:
+      name: Status LEDs
+      description: How many LEDs from the start of the strip show the status and progress bar.
+      default: 60
+      selector:
+        number:
+          min: 1
+          max: 1000
+          mode: box
+    progress_dim_pct:
+      name: Progress bar dim part
+      description: >-
+        Brightness of the part above the current progress, as a percentage of full
+        (gamma-corrected, so the number matches what you see). 5–15 % works well.
+      default: 7
+      selector:
+        number:
+          min: 0
+          max: 100
+          unit_of_measurement: "%"
+    idle_brightness:
+      name: Idle brightness
+      default: 110
+      selector:
+        number:
+          min: 1
+          max: 255
+    idle_timeout:
+      name: Turn off after idle for
+      description: Seconds at Idle with no machine state change before the status LEDs turn off. 0 = never.
+      default: 600
+      selector:
+        number:
+          min: 0
+          max: 7200
+          unit_of_measurement: s
+          mode: box
+    fireworks_secs:
+      name: Job finished effect length
+      default: 30
+      selector:
+        number:
+          min: 1
+          max: 300
+          unit_of_measurement: s
+          mode: box
+    ncsender:
+      name: ncSender entities
+      description: Leave as-is unless you renamed the ncSender device.
+      collapsed: true
+      input:
+        machine_state:
+          name: Machine state
+          default: sensor.ncsender_machine_state
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        job_status:
+          name: Job status
+          default: sensor.ncsender_job_status
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        job_progress:
+          name: Job progress
+          default: sensor.ncsender_job_progress
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        current_tool:
+          name: Current tool
+          default: sensor.ncsender_current_tool
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        controller_connected:
+          name: Controller connected
+          default: binary_sensor.ncsender_controller_connected
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: binary_sensor
+
+# restart: every change redraws from the current state. Timers use "held for" triggers;
+# don't make this automation trigger itself, which deadlocks in restart mode.
+mode: restart
+
+triggers:
+  - trigger: state
+    entity_id: !input machine_state
+  - trigger: state
+    entity_id: !input job_status
+  - trigger: state
+    entity_id: !input job_progress
+  - trigger: state
+    entity_id: !input controller_connected
+  - trigger: state
+    entity_id: !input current_tool
+    attribute: tool_changing
+  - trigger: state
+    entity_id: !input wled_light
+    from: unavailable
+  - trigger: homeassistant
+    event: start
+  - trigger: state
+    entity_id: !input machine_state
+    to: Idle
+    for:
+      seconds: !input idle_timeout
+  - trigger: state
+    entity_id: !input job_status
+    to: completed
+    for:
+      seconds: !input fireworks_secs
+    id: fireworks_end
+
+variables:
+  host: !input wled_host
+  status_leds: !input status_leds
+  progress_dim_pct: !input progress_dim_pct
+  idle_bri: !input idle_brightness
+  idle_timeout: !input idle_timeout
+  ms_entity: !input machine_state
+  js_entity: !input job_status
+  ms: "{{ states(ms_entity).split(':')[0] | lower }}"
+  js: "{{ states(js_entity) }}"
+  connected_entity: !input controller_connected
+  tool_entity: !input current_tool
+  progress_entity: !input job_progress
+  prog: "{{ states(progress_entity) | float(0) }}"
+  tool_changing: "{{ state_attr(tool_entity, 'tool_changing') == true }}"
+  idle_age: "{{ (now() - states[ms_entity].last_changed).total_seconds() | int if states[ms_entity] is not none else 0 }}"
+  # Fireworks only on a real finish (running -> completed), not after a reload.
+  just_finished: >-
+    {{ trigger.platform == 'state' and trigger.id != 'fireworks_end'
+       and trigger.entity_id == js_entity
+       and trigger.from_state is not none and trigger.from_state.state == 'running'
+       and trigger.to_state.state == 'completed' }}
+  status: >-
+    {% if is_state(connected_entity, 'off') or ms == 'alarm' %}alarm
+    {% elif ms == 'door' %}door
+    {% elif tool_changing %}tool
+    {% elif ms == 'hold' or js == 'paused' %}hold
+    {% elif ms == 'home' %}home
+    {% elif js == 'running' %}run
+    {% elif ms in ['jog', 'run'] %}jog
+    {% elif just_finished %}done
+    {% elif ms == 'idle' %}{{ 'off' if idle_timeout > 0 and idle_age >= idle_timeout else 'idle' }}
+    {% else %}off{% endif %}
+  show_progress: "{{ js in ['running', 'paused'] and status not in ['off', 'done'] }}"
+  colors:
+    alarm: [255, 0, 0]
+    door: [253, 126, 20]
+    tool: [201, 18, 168]
+    hold: [255, 193, 7]
+    home: [0, 123, 255]
+    run: [0, 255, 0]
+    jog: [0, 255, 0]
+    done: [0, 255, 0]
+    idle: [255, 255, 255]
+    "off": [0, 0, 0]
+
+actions:
+  - action: rest_command.ncsender_wled
+    data:
+      host: "{{ host }}"
+      payload:
+        "on": true
+        seg:
+          - id: 0
+            start: 0
+            stop: "{{ status_leds | int }}"
+            "on": "{{ status != 'off' }}"
+            # 98 = WLED "Percent" (progress bar), 42 = "Fireworks", 0 = solid
+            fx: "{{ 98 if show_progress else 42 if status == 'done' else 0 }}"
+            ix: "{{ (prog | round(0) | int) if show_progress else 128 }}"
+            bri: "{{ idle_bri if status == 'idle' else 255 }}"
+            col: >-
+              {% set c = colors[status] %}
+              {% set f = (progress_dim_pct / 100) ** (1 / 2.8) %}
+              {{ [c, c | map('multiply', f) | map('round') | map('int') | list
+                  if show_progress else [0, 0, 0], [0, 0, 0]] }}

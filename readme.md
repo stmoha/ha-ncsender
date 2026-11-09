@@ -55,6 +55,26 @@ All entities go `unavailable` when the WebSocket drops; the integration reconnec
 
 **Manual alternative:** copy `custom_components/ncsender/` into `/config/custom_components/` and restart.
 
+## Example blueprints
+
+Ready-made automations for common shop setups. Click **Import**, then create an automation
+from the blueprint (Settings → Automations & scenes → Blueprints) and pick your devices:
+no YAML or digging through triggers needed.
+
+| Blueprint | What it does | |
+|---|---|---|
+| **Shop equipment follows the job** | Dust collector, shop vac, compressor, air assist… turn on while a job runs (optionally only once the spindle or laser is on) and off a few seconds after it ends; turns off after a long pause | [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fstmoha%2Fha-ncsender%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fncsender%2Fequipment_follows_job.yaml) |
+| **Job alerts** | Phone notifications: job finished/stopped/error with run time, tool change that hasn't finished after a minute (quick ATC swaps stay quiet), alarm or controller disconnect | [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fstmoha%2Fha-ncsender%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fncsender%2Fjob_alerts.yaml) |
+| **WLED status strip** | LED strip with ncSender status colors and a job progress bar | [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fstmoha%2Fha-ncsender%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fncsender%2Fwled_status_strip.yaml) |
+| **WLED equipment indicator** | A few LEDs on the same strip per device (dim = powered, bright = running with a power sensor) | [![Import blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fstmoha%2Fha-ncsender%2Fblob%2Fmain%2Fblueprints%2Fautomation%2Fncsender%2Fwled_equipment_indicator.yaml) |
+
+The WLED blueprints need a short `rest_command` snippet and some hardware: see
+[examples/wled-status-strip.md](examples/wled-status-strip.md) for parts (about $25,
+USB-powered), wiring and setup.
+
+The blueprints default to the standard entity IDs (`sensor.ncsender_job_status`…); if you
+renamed the ncSender device, pick your entities under **ncSender entities**.
+
 ## Icon
 
 Brand images ship inside the integration (`custom_components/ncsender/brand/`, HA 2026.3+):

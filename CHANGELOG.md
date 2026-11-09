@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+- Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
+  buttons in the README: shop equipment follows the job (spindle/laser aware), job alerts,
+  WLED status strip with progress bar, and WLED equipment indicators.
+- `examples/wled-status-strip.md`: parts, wiring and setup guide for a USB-powered WLED
+  status strip.
+
 ## 0.3.2 — 2026-11-04
 - Connection failures and timeouts on control requests (Pause/Resume/Stop buttons, `send_command`
   action) now surface as a clean Home Assistant error instead of a raw traceback. Thanks to
