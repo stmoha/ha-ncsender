@@ -1,9 +1,9 @@
 # Changelog
 
-## 0.4.1
+## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
   buttons in the README: shop equipment follows the job (spindle/laser aware), job alerts,
-  WLED status strip with progress bar, and WLED equipment indicators.
+  WLED status strip with progress bar, and WLED equipment indicators. Contributed by tmuka (PR #2).
 - `examples/wled-status-strip.md`: parts, wiring and setup guide for a USB-powered WLED
   status strip.
 
