@@ -4,12 +4,11 @@ Status as of 2026-11-17. Keep this current — it replaces chat history as the p
 
 ## In flight
 
-- **PR #3 — Aux output switches (v0.4.0).** `switch.ncsender_output_pN` per pin listed in a new
-  `output_pins` option; state from `machineState.outputPinsState`, bidirectional with ncSender's
-  Auxiliary I/O buttons. Validate green. **Waiting on merge + release.**
 - **PR #2 — Example blueprints (tmuka, community).** Four HA blueprints + tests, no integration code.
-  Workflows need owner approval to run (first-time contributor). Review, approve CI, merge.
-  Suggest merging *after* #3 so its README/CHANGELOG edits don't conflict with v0.4.0's.
+  Reviewed 2026-11-17: triggers on `job_status: completed` and `sender_status: tool-changing` are
+  correct for current Pro (see CLAUDE.md → fixed quirks). Remaining asks: rebase on main (conflicts
+  with v0.4.0's readme/CHANGELOG edits), drop the `## Unreleased` heading, consider debouncing the
+  WLED strip's `job_progress` trigger. Workflows need owner approval to run (first-time contributor).
 
 ## Next: "HA Switches" — HA-controlled buttons on ncSender's screen with zero HA-side setup
 
@@ -49,4 +48,5 @@ pattern of the owner's existing ncSender plugins (gcode-reference, probe-plus).
 ## Done
 - v0.1.0 native integration (replaced Pi MQTT bridge) · v0.2.0 positions/workspaces/tool ·
   v0.2.1 bundled brand icons · v0.3.0 recorder-friendly telemetry · v0.3.1 M6 tool-change sensor ·
-  v0.3.2 NcSenderError on connection failures (frenck review) · HACS default store (Oct 2026).
+  v0.3.2 NcSenderError on connection failures (frenck review) · HACS default store (Oct 2026) ·
+  v0.4.0 aux output switches (PR #3, released 2026-11-17) · CLAUDE.md + this roadmap (PR #4).

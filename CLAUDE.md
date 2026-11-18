@@ -33,13 +33,19 @@ In the HACS default store since Oct 2026. Owner: stmoha. Author of ncSender: Fra
 - **Spindle vs laser** share the same fields. Laser = active with S ≤ `laser_max_s` (default 1000) and
   no RPM feedback (PWM has none); VFD spindle = anything else. Coast-down (target 0, actual > 0) is
   still "spindle on" — correct for chiller/dust automations.
-- **ncSender Pro reports `job_status: error` on a successful completion** and progress stalls ~95%.
-  Don't key completion on `completed` or `progress == 100`. The user's helper uses
-  `current_line >= total_lines - 5` with status not running/paused. Treat `error` with the processor
-  at EOF as success. (Reported upstream; may change.)
-- **Pro doesn't set `isToolChanging` for ATC swaps** and the reported tool number may not change.
-  `sensor.ncsender_tool_change` (timestamp, v0.3.1) fires on every acknowledged **M6** instead —
-  before the swap. Trigger automations on its state change, `not_from: [unknown, unavailable]`.
+- **Two Pro quirks that are now FIXED — don't re-document them as current.** Observed Oct 2026 on
+  Pro ~2.0.114; gone by the Pro build running mid-Nov 2026 (verified from the owner's HA recorder
+  history, 2026-11-15: jobs end `running → completed`; `sender_status` shows `tool-changing` on every
+  M6, including mid-job). Keep the fallbacks, drop the claims:
+  - *Was:* `job_status: error` on a successful completion, progress stalled ~95%. *Now:* `completed`
+    is reliable; `error` means a real error (the Nov 15 one went `tool-changing → hold → alarm`).
+    The owner's `binary_sensor.cnc_job_finished` helper (`current_line >= total_lines - 5`, status not
+    running/paused) still works and is a fine belt-and-suspenders for older Pro builds.
+  - *Was:* `isToolChanging` not set for ATC swaps. *Now:* `sender_status` → `tool-changing` is emitted
+    (confirmed Pro + community source, `CommandProcessor` step 12). `sensor.ncsender_tool_change`
+    (timestamp, v0.3.1, fires on every acknowledged **M6**) remains useful because it fires *before*
+    the swap and carries the tool/pocket; trigger on its state change with
+    `not_from: [unknown, unavailable]`.
 - **Aux outputs.** ncSender tracks `M64 Pn`/`M65 Pn` itself and publishes ON pins in
   `machineState.outputPinsState`. grblHAL rejects `P >= ioports_unclaimed(...)` with error:39, so only
   the board's real unclaimed outputs work (single digits on SLB-EXT) — "virtual" pins beyond that don't.
@@ -65,7 +71,7 @@ In the HACS default store since Oct 2026. Owner: stmoha. Author of ncSender: Fra
 4. HACS: users see the update; the owner's instance may need HACS → ncSender → ⋮ → Redownload.
 
 ## Upstream items to raise with Francis (ncSender)
-- `job_status: error` on successful completion (Pro).
-- `isToolChanging` not set for ATC swaps (Pro).
+- ~~`job_status: error` on successful completion (Pro)~~ — fixed upstream by Nov 2026.
+- ~~`isToolChanging` not set for ATC swaps (Pro)~~ — fixed upstream by Nov 2026.
 - Plugin sandbox has no network API; `Permissions` manifest field is parsed but unused. See
   `docs/ROADMAP.md` → "HA Switches plugin" for the comment-G-code design that works without it.
