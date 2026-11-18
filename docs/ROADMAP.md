@@ -91,9 +91,27 @@ here: the HA harness imports `fcntl`/`resource`, so it only runs on Linux/macOS 
   allowlisted entity changes, and the open dialog polls GET every ~2 s to light the buttons.
   Caveats: PUT replaces the whole settings file (must merge, small race with a user Save), and the
   plugin id becomes a contract. Alternatively ask Francis for a generic plugin broadcast endpoint.
-- *Upstream asks for Francis:* let comment-only lines through `CheckHoldStateSafety` (they never
-  move the machine) so switches work while paused; optionally main-screen plugin buttons (today
-  the dialog is one tap away in the Tools menu).
+- *Main-screen switches (the real goal) — needs a small upstream change.* Checked upstream
+  siganberg/ncSender `main` (2026-11-17): Aux I/O outputs are now **providers** in
+  `src/NcSender.Client/src/lib/aux-outputs.ts`: each saved output is its "on" command, and a provider
+  maps it to the "off" command. Francis's own Wireless I/O provider already uses a comment sentinel,
+  `(DONGLE:xio:out 2 1)`, the same pattern as ours. Today the Add Output dialog is a dropdown
+  (M7/M8, `M64 P0..Pn-1`, Wireless I/O), so `(HA …)` can't be picked. Writing it into
+  `settings.auxOutputs` by hand gives a main-screen switch whose **On** works but whose **Off**
+  sends nothing (no provider knows the off command), and whose state is local-only. So no
+  workaround; propose upstream:
+  1. `aux-outputs.ts`: an HA provider, `(HA <entity_id> ON)` → `(HA <entity_id> OFF)` (~5 lines).
+  2. `AuxOutputDialog.vue`: a "Home Assistant" output choice with an entity-ID field.
+  3. `GCodeVisualizer.vue`: set the switch state from successful `cnc-command-result` lines
+     `(HA <entity_id> ON|OFF)` (like the bridge's `dongle:device-message` listener), so job lines
+     and other clients stay in sync.
+  4. Reverse direction, integration-only: when an allowlisted entity changes in HA (not from our
+     own call — track the Context), send `(HA <entity_id> ON|OFF)` to ncSender so the switch
+     follows. The integration then sees the ack and calls turn_on on an already-on entity — a
+     no-op, no loop.
+  With that, the HA Switches plugin becomes optional (or just a helper that writes the outputs).
+- *Upstream ask for Francis:* let comment-only lines through `CheckHoldStateSafety` (they never
+  move the machine) so switches work while paused.
 - Move the plugin to its own repo (`ncsender-plugin-ha-switches`) and list it in
   `siganberg/ncSender.plugins-registry` once the owner is happy with it.
 
