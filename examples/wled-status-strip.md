@@ -87,6 +87,11 @@ Everything runs in Home Assistant with two blueprints; WLED needs no presets or 
 
 - **Progress bar dim part:** 5–15 % is a good range. The value is gamma-corrected for
   WLED's default gamma 2.8, so 50 % looks about half as bright as full.
+- **How often WLED is called:** once per state change, plus at most once per whole
+  percent of progress. Progress updates that round to the same percent are skipped, so a
+  job sends about 100 progress updates whatever its length or the telemetry interval. If
+  that is still too much for your WLED, raise the telemetry update interval in the
+  integration's options (fewer, bigger steps on the bar).
 - **Idle timeout:** seconds of unchanged Idle before the status LEDs turn off; any state
   change lights them again. 0 keeps them on.
 - **Colors** are in the blueprint's `colors:` variable if you want different ones (take

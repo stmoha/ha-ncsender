@@ -193,6 +193,12 @@ async def test_wled_status_strip(hass, bp, wled_calls, freezer):
     assert (s["start"], s["stop"], s["fx"], s["ix"], s["on"]) == (0, 48, 98, 40, True)
     assert s["col"][0] == [0, 255, 0] and s["col"][1] == [0, round(255 * 0.07 ** (1 / 2.8)), 0]
 
+    n = len(wled_calls)
+    await _set(hass, PROG, "40.4")                                                   # same whole percent
+    assert len(wled_calls) == n
+    await _set(hass, PROG, "41.0")
+    assert len(wled_calls) == n + 1 and _seg(wled_calls[-1])["ix"] == 41
+
     await _set(hass, MS, "Hold:0")
     s = _seg(wled_calls[-1]); assert s["fx"] == 98 and s["col"][0] == [255, 193, 7]   # amber progress bar
     await _set(hass, TOOL, "1", {"tool_changing": True})

@@ -100,6 +100,10 @@ blueprint:
                   domain: sensor
         tool_change:
           name: Tool change (last M6)
+          description: >-
+            Used for the tool number in the alert. It updates on every M6 before the swap
+            starts, so it is also the entity to trigger on in your own automation if you want
+            a heads-up that a bit change is coming.
           default: sensor.ncsender_tool_change
           selector:
             entity:

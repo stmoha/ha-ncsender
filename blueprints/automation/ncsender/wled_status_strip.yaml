@@ -135,6 +135,7 @@ triggers:
     entity_id: !input job_status
   - trigger: state
     entity_id: !input job_progress
+    id: progress
   - trigger: state
     entity_id: !input controller_connected
   - trigger: state
@@ -156,6 +157,16 @@ triggers:
     for:
       seconds: !input fireworks_secs
     id: fireworks_end
+
+# The bar shows whole percents, so a progress change that rounds to the same value is
+# skipped: at most ~100 WLED calls per job, however long it runs.
+conditions:
+  - condition: template
+    value_template: >-
+      {{ trigger.id != 'progress'
+         or trigger.from_state is none or trigger.to_state is none
+         or (trigger.from_state.state | float(-1)) | round(0)
+            != (trigger.to_state.state | float(-1)) | round(0) }}
 
 variables:
   host: !input wled_host
