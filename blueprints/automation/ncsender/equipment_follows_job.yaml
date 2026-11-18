@@ -1,0 +1,137 @@
+blueprint:
+  name: ncSender – Shop equipment follows the job
+  description: >-
+    Turns shop equipment (dust collector, shop vac, air compressor, air assist, exhaust fan…)
+    on when a job is running and off shortly after it ends.
+
+
+    By default the equipment waits for the spindle or laser to actually be on, so loading a
+    job, dry runs and probing don't start it. Paused jobs turn it off after a timeout.
+
+
+    Works with any on/off device: smart plugs and relays (`switch`), fans, lights and
+    `input_boolean` helpers. Create one automation per group of equipment that should behave
+    the same way.
+  domain: automation
+  source_url: https://github.com/stmoha/ha-ncsender/blob/main/blueprints/automation/ncsender/equipment_follows_job.yaml
+  input:
+    equipment:
+      name: Equipment
+      description: The devices to run with the job (for example your dust collector plug).
+      selector:
+        entity:
+          multiple: true
+          filter:
+            - domain: [switch, fan, light, input_boolean]
+    require_cutting:
+      name: Only while the spindle or laser is on
+      description: >-
+        On: start the equipment only once the job is running AND the spindle or laser is on.
+        Off: start it as soon as the job is running.
+      default: true
+      selector:
+        boolean:
+    off_delay:
+      name: Keep running after the job ends
+      description: Seconds to keep the equipment on after the job completes, stops or errors (clears the hose, lets dust settle).
+      default: 15
+      selector:
+        number:
+          min: 0
+          max: 600
+          unit_of_measurement: s
+          mode: box
+    pause_timeout:
+      name: Turn off when paused for
+      description: Minutes a job can stay paused before the equipment turns off. It turns back on when the job resumes.
+      default: 10
+      selector:
+        number:
+          min: 1
+          max: 120
+          unit_of_measurement: min
+          mode: box
+    ncsender:
+      name: ncSender entities
+      description: Leave as-is unless you renamed the ncSender device.
+      collapsed: true
+      input:
+        job_status:
+          name: Job status
+          default: sensor.ncsender_job_status
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: sensor
+        spindle:
+          name: Spindle
+          default: binary_sensor.ncsender_spindle
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: binary_sensor
+        laser:
+          name: Laser
+          default: binary_sensor.ncsender_laser
+          selector:
+            entity:
+              filter:
+                - integration: ncsender
+                  domain: binary_sensor
+
+mode: restart
+
+triggers:
+  - trigger: state
+    entity_id: !input job_status
+    to: running
+    id: start
+  - trigger: state
+    entity_id: !input spindle
+    to: "on"
+    id: start
+  - trigger: state
+    entity_id: !input laser
+    to: "on"
+    id: start
+  - trigger: state
+    entity_id: !input job_status
+    to: [completed, stopped, error, none]
+    for:
+      seconds: !input off_delay
+    id: stop
+  - trigger: state
+    entity_id: !input job_status
+    to: paused
+    for:
+      minutes: !input pause_timeout
+    id: stop
+
+variables:
+  job_status: !input job_status
+  spindle: !input spindle
+  laser: !input laser
+  require_cutting: !input require_cutting
+
+actions:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: start
+          - condition: template
+            value_template: >-
+              {{ is_state(job_status, 'running')
+                 and (not require_cutting or is_state(spindle, 'on') or is_state(laser, 'on')) }}
+        sequence:
+          - action: homeassistant.turn_on
+            target:
+              entity_id: !input equipment
+      - conditions:
+          - condition: trigger
+            id: stop
+        sequence:
+          - action: homeassistant.turn_off
+            target:
+              entity_id: !input equipment

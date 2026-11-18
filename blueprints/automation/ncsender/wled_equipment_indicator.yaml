@@ -1,0 +1,137 @@
+blueprint:
+  name: ncSender – WLED equipment indicator
+  description: >-
+    Lights a few LEDs on the WLED status strip while a piece of shop equipment is on
+    (dust collector, compressor, air assist…). With an optional power sensor, the LEDs are
+    dim while the device is powered and bright while it actually draws power (for
+    example a compressor motor running).
+
+
+    Create one automation per device, each with its own WLED segment number and LEDs.
+    Leave one dark LED between groups so they're easy to tell apart.
+
+
+    **Needs the `rest_command.ncsender_wled` snippet in configuration.yaml** (see
+    examples/wled-status-strip.md in the ha-ncsender repository).
+  domain: automation
+  source_url: https://github.com/stmoha/ha-ncsender/blob/main/blueprints/automation/ncsender/wled_equipment_indicator.yaml
+  input:
+    device:
+      name: Equipment
+      description: The on/off device to show (for example the dust collector plug).
+      selector:
+        entity:
+          filter:
+            - domain: [switch, fan, light, input_boolean, binary_sensor]
+    power_sensor:
+      name: Power sensor (optional)
+      description: A power (W) sensor for the same device. Leave empty to just show on/off.
+      default: []
+      selector:
+        entity:
+          filter:
+            - domain: sensor
+              device_class: power
+    power_threshold:
+      name: Running above
+      description: Power (W) above which the device counts as running (bright).
+      default: 100
+      selector:
+        number:
+          min: 1
+          max: 5000
+          unit_of_measurement: W
+          mode: box
+    wled_light:
+      name: WLED light
+      description: The WLED device's main light entity (used to redraw after it reboots).
+      selector:
+        entity:
+          filter:
+            - integration: wled
+              domain: light
+    wled_host:
+      name: WLED address
+      description: IP address or hostname of the WLED controller.
+      selector:
+        text:
+    segment:
+      name: WLED segment number
+      description: 1, 2, 3… (segment 0 is the status bar). Use a different number for each indicator.
+      default: 1
+      selector:
+        number:
+          min: 1
+          max: 15
+          mode: box
+    first_led:
+      name: First LED
+      description: Index of the first LED of this indicator (the strip starts at 0).
+      selector:
+        number:
+          min: 0
+          max: 1000
+          mode: box
+    led_count:
+      name: Number of LEDs
+      default: 3
+      selector:
+        number:
+          min: 1
+          max: 50
+          mode: box
+    color:
+      name: Color
+      default: [255, 200, 150]
+      selector:
+        color_rgb:
+    dim_brightness:
+      name: Powered but not running brightness
+      description: Used only with a power sensor.
+      default: 40
+      selector:
+        number:
+          min: 1
+          max: 255
+
+mode: restart
+
+triggers:
+  - trigger: state
+    entity_id: !input device
+  - trigger: state
+    entity_id: !input power_sensor
+  - trigger: state
+    entity_id: !input wled_light
+    from: unavailable
+  - trigger: homeassistant
+    event: start
+
+variables:
+  host: !input wled_host
+  device: !input device
+  power_sensor: !input power_sensor
+  threshold: !input power_threshold
+  segment: !input segment
+  first: !input first_led
+  count: !input led_count
+  color: !input color
+  dim: !input dim_brightness
+  is_on: "{{ is_state(device, 'on') }}"
+  has_power: "{{ power_sensor | default([], true) | length > 0 }}"
+  running: "{{ has_power and states(power_sensor) | float(0) > threshold }}"
+
+actions:
+  - action: rest_command.ncsender_wled
+    data:
+      host: "{{ host }}"
+      payload:
+        "on": true
+        seg:
+          - id: "{{ segment | int }}"
+            start: "{{ first | int }}"
+            stop: "{{ (first + count) | int }}"
+            fx: 0
+            "on": "{{ is_on }}"
+            bri: "{{ 255 if (not has_power or running) else dim }}"
+            col: "{{ [color | list] }}"

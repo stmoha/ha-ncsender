@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.1
+- Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
+  buttons in the README: shop equipment follows the job (spindle/laser aware), job alerts,
+  WLED status strip with progress bar, and WLED equipment indicators.
+- `examples/wled-status-strip.md`: parts, wiring and setup guide for a USB-powered WLED
+  status strip.
+
 ## 0.4.0 — 2026-11-08
 - **Aux output switches.** New option *Aux output pins exposed as switches* (Configure → e.g. `0, 2`).
   Each listed grblHAL aux output becomes `switch.ncsender_output_pN`, mirroring ncSender's own
