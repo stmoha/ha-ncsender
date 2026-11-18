@@ -90,8 +90,22 @@ Settings → Devices & services → ncSender → **Configure**:
 - **Telemetry update interval** (default 5 s, range 1–60) — how often positions, RPM, feed rate,
   progress and time remaining update. State changes (job status, spindle/laser/coolant, alarms,
   tool, workspace) are always immediate regardless of this setting.
+- **Aux output pins exposed as switches** — see below.
+- **Devices ncSender may switch** — entities that `(HA <entity_id> ON|OFF|TOGGLE)` commands from
+  ncSender may control. Empty by default: nothing is switched until you pick something.
 
 ## Controlling Home Assistant devices from ncSender's screen
+
+### HA Switches plugin (v0.5.0+, prototype)
+
+Install the **HA Switches** ncSender plugin from [`ncsender-plugin/`](ncsender-plugin/README.md),
+add your devices (`Chiller, switch.chiller` — one per line), and allow the same entities in
+Configure → *Devices ncSender may switch*. Each On/Off button sends a comment line such as
+`(HA switch.chiller ON)`; the controller ignores it and the integration switches the device.
+No automation, no aux pin, and no limit on how many. The same comment works inside a G-code file.
+Limits: buttons don't work while a job is paused, and they don't show the device's state yet.
+
+### Aux output pins
 
 grblHAL aux outputs don't have to be wired to anything — ncSender tracks `M64 Pn`/`M65 Pn` itself,
 so an unused pin number is a free virtual switch:

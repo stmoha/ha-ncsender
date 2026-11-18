@@ -10,6 +10,9 @@ In the HACS default store since Oct 2026. Owner: stmoha. Author of ncSender: Fra
 - `tests/` — HA harness tests (`pytest-homeassistant-custom-component`). The harness needs Python 3.13
   and HA ≥ 2025.1; when the sandbox can't run it, test `client.py` standalone against a fake
   aiohttp server (pattern in git history: PR #1, PR #3) and syntax-check the rest with `ast.parse`.
+- `ncsender-plugin/` — the **HA Switches** ncSender plugin (prototype, v0.1.0): a Tools-menu dialog
+  whose buttons send `(HA <entity_id> ON|OFF)` comments; `package.py` builds the install ZIP.
+  The integration side is `parse_ha_command` in `client.py` + the allowlist handler in `__init__.py`.
 - `blueprints/`, `examples/` — community-contributed HA blueprints (PR #2, tmuka). No integration code.
 - `docs/ROADMAP.md` — what's in flight and what's next. Read it before starting new work.
 

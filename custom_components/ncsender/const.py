@@ -25,6 +25,13 @@ MAX_TELEMETRY_INTERVAL = 60
 CONF_OUTPUT_PINS = "output_pins"
 DEFAULT_OUTPUT_PINS = ""
 
+# Entities that "(HA <entity_id> ON|OFF|TOGGLE)" comment commands may control
+# (sent by the HA Switches ncSender plugin, or written into a G-code file).
+# Anything not listed is ignored, so a downloaded job can't reach other devices.
+CONF_HA_SWITCHES = "ha_switches"
+HA_SWITCH_DOMAINS = ["switch", "light", "fan", "input_boolean", "script"]
+EVENT_HA_COMMAND = "ncsender_ha_command"
+
 SERVICE_SEND_COMMAND = "send_command"
 ATTR_COMMAND = "command"
 ATTR_ENTRY_ID = "entry_id"

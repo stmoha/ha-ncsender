@@ -1,0 +1,27 @@
+{
+  "id": "com.cncdocs.ha-switches",
+  "name": "HA Switches",
+  "version": "0.1.0",
+  "minAppVersion": "0.3.111",
+  "platforms": {
+    "v1": "0.3.111",
+    "pro-v1": "0.3.111",
+    "pro-v2": "2.0.0"
+  },
+  "author": "Stefan",
+  "description": "Switch Home Assistant devices (chiller, air, dust collector, lights) from ncSender. Each button sends a comment line like (HA switch.shop_lights ON), which the controller ignores and the ncSender Home Assistant integration turns into a switch command. Needs the ha-ncsender integration with the device allowed in its Configure screen.",
+  "repository": "https://github.com/stmoha/ha-ncsender",
+  "category": "utility",
+  "priority": 50,
+  "entry": "index.js",
+  "configUi": "config.html",
+  "events": [],
+  "permissions": [],
+  "toolMenu": [
+    {
+      "id": "open-switches",
+      "label": "HA Switches",
+      "clientOnly": true
+    }
+  ]
+}

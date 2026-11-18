@@ -8,7 +8,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PORT, Platform
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.core import HomeAssistant, ServiceCall, callback
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError, ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -17,11 +17,13 @@ from .client import NcSenderClient, NcSenderError
 from .const import (
     ATTR_COMMAND,
     ATTR_ENTRY_ID,
+    CONF_HA_SWITCHES,
     CONF_LASER_MAX_S,
     CONF_TELEMETRY_INTERVAL,
     DEFAULT_LASER_MAX_S,
     DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
+    EVENT_HA_COMMAND,
     SERVICE_SEND_COMMAND,
 )
 
@@ -54,6 +56,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: NcSenderConfigEntry) -> 
         )
 
     entry.runtime_data = client
+    entry.async_on_unload(client.add_ha_command_listener(_ha_command_handler(hass, entry)))
     client.start()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
@@ -73,6 +76,39 @@ async def async_unload_entry(hass: HomeAssistant, entry: NcSenderConfigEntry) ->
 async def _async_update_listener(hass: HomeAssistant, entry: NcSenderConfigEntry) -> None:
     """Reload on options change."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _ha_command_handler(hass: HomeAssistant, entry: NcSenderConfigEntry):
+    """Turn "(HA <entity_id> ON|OFF|TOGGLE)" commands into service calls,
+    for allowlisted entities only. Every command fires an event either way,
+    so the allowlist is easy to debug from Developer tools → Events."""
+    allowed = set(entry.options.get(CONF_HA_SWITCHES) or [])
+
+    @callback
+    def _handle(entity_id: str, service: str) -> None:
+        is_allowed = entity_id in allowed
+        hass.bus.async_fire(
+            EVENT_HA_COMMAND,
+            {"entity_id": entity_id, "service": service, "allowed": is_allowed},
+        )
+        if not is_allowed:
+            _LOGGER.warning(
+                "Ignoring ncSender command for %s: not in the integration's allowed "
+                "entities (Settings → ncSender → Configure)",
+                entity_id,
+            )
+            return
+        hass.async_create_task(_async_call(entity_id, service))
+
+    async def _async_call(entity_id: str, service: str) -> None:
+        try:
+            await hass.services.async_call(
+                "homeassistant", service, {"entity_id": entity_id}, blocking=True
+            )
+        except HomeAssistantError as err:
+            _LOGGER.warning("ncSender command %s %s failed: %s", service, entity_id, err)
+
+    return _handle
 
 
 def _async_register_services(hass: HomeAssistant) -> None:

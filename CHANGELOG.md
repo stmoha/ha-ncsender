@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — unreleased
+- **Switch HA devices from ncSender.** The integration now acts on comment lines of the form
+  `(HA <entity_id> ON|OFF|TOGGLE)` once the controller acknowledges them, calling
+  `homeassistant.turn_on` / `turn_off` / `toggle`. Only entities picked in the new option
+  *Devices ncSender may switch* (Configure; switches, lights, fans, input booleans, scripts) are
+  acted on, so a downloaded G-code file can't reach anything else. Works from the new
+  **HA Switches** ncSender plugin (prototype in `ncsender-plugin/`) and from comments inside a job.
+- Every such command fires an `ncsender_ha_command` event (`entity_id`, `service`, `allowed`)
+  for debugging and automations.
+
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
   buttons in the README: shop equipment follows the job (spindle/laser aware), job alerts,

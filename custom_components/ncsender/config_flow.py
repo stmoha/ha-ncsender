@@ -9,10 +9,12 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .client import NcSenderClient
 from .const import (
+    CONF_HA_SWITCHES,
     CONF_LASER_MAX_S,
     CONF_OUTPUT_PINS,
     CONF_TELEMETRY_INTERVAL,
@@ -23,6 +25,7 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
+    HA_SWITCH_DOMAINS,
     MAX_TELEMETRY_INTERVAL,
     MIN_TELEMETRY_INTERVAL,
 )
@@ -109,6 +112,12 @@ class NcSenderOptionsFlow(OptionsFlow):
                         CONF_OUTPUT_PINS,
                         default=opts.get(CONF_OUTPUT_PINS, DEFAULT_OUTPUT_PINS),
                     ): str,
+                    vol.Optional(
+                        CONF_HA_SWITCHES,
+                        default=opts.get(CONF_HA_SWITCHES, []),
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain=HA_SWITCH_DOMAINS, multiple=True)
+                    ),
                 }
             ),
         )
