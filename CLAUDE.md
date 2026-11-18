@@ -62,6 +62,21 @@ In the HACS default store since Oct 2026. Owner: stmoha. Author of ncSender: Fra
 - Version in `manifest.json` == git tag == release title (`vX.Y.Z`, plain). Changelog entry per release.
 - HA may not load `__init__.py` in the sandbox (3.12 syntax); import `const`/`client` by path for tests.
 
+## Owner's Home Assistant (so YAML handed over is paste-ready — no `YOUR_*` placeholders for the owner)
+- Phone notify target: `notify.mobile_app_iphone_24` (iOS, companion-app beta with Live Activities).
+- Switches: chiller `switch.s4_cnc_chiller`, air assist `switch.garage_cnc_air`,
+  dust collector `switch.garage_dust_collector_shelly_1_gen4`.
+- Live Activity tag is `cnc_job` (script `script.cnc_live_activity_update`); the Clear automation ends
+  it with `message: clear_notification` + that tag. Tags must match or the island never ends.
+- Helper `binary_sensor.cnc_job_finished` (UI template helper) = `is_state(job_status, 'completed')`.
+- HA has the Studio Code Server and Terminal add-ons. Config lives in `/config/automations.yaml` and
+  `/config/scripts.yaml`; after overwriting a file by hand the owner must **Developer tools → YAML →
+  Reload Automations / Scripts** — HA doesn't watch the files. UI-created helpers live in `.storage`,
+  not in those files. Review the live config by having the owner download those two files.
+- The owner's live automations are mirrored (with placeholders) in `examples/automations/`; keep both
+  in step. The public copy uses `YOUR_*`; the owner's copy never should (lesson from 2026-11-17: a
+  `notify.mobile_app_YOUR_PHONE` left in three automations silently sent nothing).
+
 ## Release routine (the PR→merge part is automatable; the release button is the owner's)
 1. Branch → change → `manifest.json` bump → `CHANGELOG.md` entry → commit → push → open PR.
 2. Validate workflow (hacs + hassfest) must be green. Workflows for first-time contributors need

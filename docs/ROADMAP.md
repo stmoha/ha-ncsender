@@ -8,7 +8,17 @@ Status as of 2026-11-17. Keep this current — it replaces chat history as the p
   Reviewed 2026-11-17: triggers on `job_status: completed` and `sender_status: tool-changing` are
   correct for current Pro (see CLAUDE.md → fixed quirks). Remaining asks: rebase on main (conflicts
   with v0.4.0's readme/CHANGELOG edits), drop the `## Unreleased` heading, consider debouncing the
-  WLED strip's `job_progress` trigger. Workflows need owner approval to run (first-time contributor).
+  WLED strip's `job_progress` trigger. Review posted (Request changes) 2026-11-17; CI approved and
+  green on his branch. Waiting on tmuka's rebase → then Approve → Squash and merge → release v0.4.1
+  (blueprints as headline; his CHANGELOG entry goes under that heading).
+- **PR #6 — `examples/automations/`** (owner's CNC automations + Live Activity script, placeholders).
+  Docs only. Merge when Validate is green; no release needed.
+
+## Owner's HA config (tracked)
+- `examples/automations/` — the seven CNC automations, the Live Activity script, and the helper
+  template, with `YOUR_*` placeholders. The owner's live HA copy has real entity IDs
+  (`notify.mobile_app_iphone_24`, chiller/air/dust-collector switches). When the live config changes,
+  update the example to match; when the integration's entity contract changes, update both.
 
 ## Next: "HA Switches" — HA-controlled buttons on ncSender's screen with zero HA-side setup
 
@@ -46,6 +56,8 @@ pattern of the owner's existing ncSender plugins (gcode-reference, probe-plus).
   alert showing a pocket number where they expected a tool name.
 
 ## Done
+- 2026-11-17: owner's HA automations brought current for Pro (completion on `completed`, real `error`
+  alert, Live Activity shows `tool-changing` + tool number). PR #5 docs correction merged.
 - v0.1.0 native integration (replaced Pi MQTT bridge) · v0.2.0 positions/workspaces/tool ·
   v0.2.1 bundled brand icons · v0.3.0 recorder-friendly telemetry · v0.3.1 M6 tool-change sensor ·
   v0.3.2 NcSenderError on connection failures (frenck review) · HACS default store (Oct 2026) ·
