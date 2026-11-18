@@ -1,18 +1,11 @@
 # Roadmap
 
-Status as of 2026-11-17. Keep this current — it replaces chat history as the project's memory.
+Status as of 2026-11-18. Keep this current — it replaces chat history as the project's memory.
 
 ## In flight
 
-- **PR #2 — Example blueprints (tmuka, community).** Four HA blueprints + tests, no integration code.
-  Reviewed 2026-11-17: triggers on `job_status: completed` and `sender_status: tool-changing` are
-  correct for current Pro (see CLAUDE.md → fixed quirks). Remaining asks: rebase on main (conflicts
-  with v0.4.0's readme/CHANGELOG edits), drop the `## Unreleased` heading, consider debouncing the
-  WLED strip's `job_progress` trigger. Review posted (Request changes) 2026-11-17; CI approved and
-  green on his branch. Waiting on tmuka's rebase → then Approve → Squash and merge → release v0.4.1
-  (blueprints as headline; his CHANGELOG entry goes under that heading).
-- **PR #6 — `examples/automations/`** (owner's CNC automations + Live Activity script, placeholders).
-  Docs only. Merge when Validate is green; no release needed.
+- **v0.4.1 release** — blueprints from PR #2. Version-bump PR open; after merge the owner
+  publishes release `v0.4.1` on GitHub.
 
 ## Owner's HA config (tracked)
 - `examples/automations/` — the seven CNC automations, the Live Activity script, and the helper
@@ -56,6 +49,8 @@ pattern of the owner's existing ncSender plugins (gcode-reference, probe-plus).
   alert showing a pocket number where they expected a tool name.
 
 ## Done
+- 2026-11-18: PR #2 example blueprints (tmuka) merged — four blueprints, WLED guide, tests;
+  WLED strip redraws once per whole percent. PR #6 owner's automations in `examples/automations/`.
 - 2026-11-17: owner's HA automations brought current for Pro (completion on `completed`, real `error`
   alert, Live Activity shows `tool-changing` + tool number). PR #5 docs correction merged.
 - v0.1.0 native integration (replaced Pi MQTT bridge) · v0.2.0 positions/workspaces/tool ·
