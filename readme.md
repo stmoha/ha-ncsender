@@ -29,6 +29,7 @@ Device **ncSender** with:
 | `sensor.ncsender_current_tool` | tool/slot number the controller reports. Attributes: name, tool_id, pocket, type, diameter, TLO, life remaining, tool_length_set, tool_changing, and a `pockets` map of every assigned pocket → tool name |
 | `sensor.ncsender_tool_change` | timestamp of the last acknowledged M6 — trigger on *any state change* for tool-change alerts. Attributes: `requested_tool`, `previous_tool`, `command` |
 | `button.ncsender_pause_job`, `_resume_job`, `_stop_job` | job control |
+| `switch.ncsender_output_pN` | grblHAL aux outputs (M64/M65), one per pin listed in options; bidirectional with ncSender's Auxiliary I/O buttons |
 
 Service **`ncsender.send_command`** — send any G-code or realtime command:
 
@@ -69,6 +70,33 @@ Settings → Devices & services → ncSender → **Configure**:
 - **Telemetry update interval** (default 5 s, range 1–60) — how often positions, RPM, feed rate,
   progress and time remaining update. State changes (job status, spindle/laser/coolant, alarms,
   tool, workspace) are always immediate regardless of this setting.
+
+## Controlling Home Assistant devices from ncSender's screen
+
+grblHAL aux outputs don't have to be wired to anything — ncSender tracks `M64 Pn`/`M65 Pn` itself,
+so an unused pin number is a free virtual switch:
+
+1. **ncSender** → Settings → Advanced → Auxiliary I/O → *Add Output*: name it (e.g. "Shop Lights"),
+   pick an unused output such as `M64 P2`. You now have a button on the main screen.
+2. **Home Assistant** → ncSender → Configure → *Aux output pins exposed as switches*: `2`. After the
+   reload, `switch.ncsender_output_p2` appears and follows that button.
+3. Mirror it onto the real device with one automation:
+
+```yaml
+alias: Shop lights follow ncSender P2
+mode: restart
+triggers:
+  - trigger: state
+    entity_id: switch.ncsender_output_p2
+    to: ["on", "off"]
+actions:
+  - action: "switch.turn_{{ trigger.to_state.state }}"
+    target:
+      entity_id: switch.shop_lights
+```
+
+The link is bidirectional: toggling `switch.ncsender_output_p2` in HA sends the M-code, and ncSender's
+button lights up. `M64 P2` inside a G-code file works the same way.
 
 ## Database / recorder
 

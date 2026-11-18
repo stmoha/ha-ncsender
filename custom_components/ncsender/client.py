@@ -49,6 +49,7 @@ IMMEDIATE_KEYS = frozenset(
         "workspace_attributes",
         "tool_change",
         "tool_change_attributes",
+        "output_pins",
         "tool",
         "tool_attributes",
     }
@@ -349,6 +350,9 @@ class NcSenderClient:
             },
             # Telemetry is quantized: RPM/feed to 10s, positions to 0.01 mm,
             # so sensor jitter doesn't generate recorder rows.
+            # ncSender tracks M64/M65 itself and reports the ON pins here; a pin
+            # need not be wired to anything, so these double as virtual switches.
+            "output_pins": sorted(int(p) for p in (ms.get("outputPinsState") or []) if str(p).isdigit()),
             "tool_change": (self.last_tool_change or {}).get("at"),
             "tool_change_attributes": self.last_tool_change or {},
             "spindle_rpm": _q(rpm_actual, 10),
@@ -450,6 +454,9 @@ class NcSenderClient:
 
     async def async_send_command(self, command: str) -> None:
         await self._post("/api/send-command", {"command": command, "sourceId": SOURCE_ID})
+
+    async def async_set_output(self, pin: int, on: bool) -> None:
+        await self.async_send_command(f"{'M64' if on else 'M65'} P{int(pin)}")
 
     async def async_pause(self) -> None:
         await self._post("/api/gcode-job/pause")

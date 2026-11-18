@@ -28,11 +28,13 @@
         "title": "ncSender options",
         "data": {
           "laser_max_s": "Laser S-value maximum",
-          "telemetry_interval": "Telemetry update interval (seconds)"
+          "telemetry_interval": "Telemetry update interval (seconds)",
+          "output_pins": "Aux output pins exposed as switches"
         },
         "data_description": {
           "laser_max_s": "Highest S value your laser accepts. Spindle commands above this are treated as the VFD spindle.",
-          "telemetry_interval": "How often positions, RPM, feed rate and progress are updated in Home Assistant. Lower is more responsive; higher keeps the recorder database smaller during long jobs. State changes (job status, spindle on/off, alarms) are always immediate."
+          "telemetry_interval": "How often positions, RPM, feed rate and progress are updated in Home Assistant. Lower is more responsive; higher keeps the recorder database smaller during long jobs. State changes (job status, spindle on/off, alarms) are always immediate.",
+          "output_pins": "Comma-separated grblHAL aux output numbers (the N in M64 PN), e.g. \"0, 2\". Each becomes a switch that mirrors ncSender Auxiliary I/O state. Pins need no physical wiring: an unused number acts as a virtual switch you can mirror onto a Home Assistant device."
         }
       }
     }

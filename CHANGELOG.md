@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.4.0 — 2026-11-08
+- **Aux output switches.** New option *Aux output pins exposed as switches* (Configure → e.g. `0, 2`).
+  Each listed grblHAL aux output becomes `switch.ncsender_output_pN`, mirroring ncSender's own
+  Auxiliary I/O state: a press in ncSender's UI, an `M64 Pn` in a job, or a toggle in Home Assistant
+  all stay in sync. A pin needs no physical wiring — an unused number is a *virtual switch* you can
+  mirror onto any HA device, giving you an HA-controlled button on ncSender's main screen.
+
 ## 0.3.2 — 2026-11-04
 - Connection failures and timeouts on control requests (Pause/Resume/Stop buttons, `send_command`
   action) now surface as a clean Home Assistant error instead of a raw traceback. Thanks to
