@@ -110,6 +110,18 @@ here: the HA harness imports `fcntl`/`resource`, so it only runs on Linux/macOS 
      follows. The integration then sees the ack and calls turn_on on an already-on entity — a
      no-op, no loop.
   With that, the HA Switches plugin becomes optional (or just a helper that writes the outputs).
+  **Drafted 2026-11-18** (not sent): branches `feature/home-assistant-aux-output` (parts 1-3) and
+  `feature/aux-output-shortcuts` (a "Toggle <output>" keyboard/gamepad action for every Aux I/O output,
+  so HA outputs get shortcuts too) in a worktree of the owner's ncSender clone,
+  `GitHub/ncSender-ha-aux`. Client tests + `vite build` pass; not clicked through (server needs
+  .NET 10). Part 4 (integration pushes HA-side changes back) is still to do, in this repo.
+- *Plugin shortcuts today:* every manifest `toolMenu` item is bindable (`Plugin:<id>:<item>`), but on
+  pro-v2 an item can only open the plugin's dialog, not run code. So a per-switch shortcut is possible
+  only as a hack (one menu item per switch slot, dialog sends TOGGLE and closes itself). Upstream
+  shortcuts for Aux I/O outputs are the clean route.
+- *Plugin web requests (upstream, Nov 2026, "Vaultix Sync"):* plugins can now ask for web requests,
+  so a plugin could call HA's REST API directly. Not used: it needs an HA token stored in plugin
+  settings, which anyone on the LAN can read from ncSender (`/api/plugins/<id>/settings`, no auth).
 - *Upstream ask for Francis:* let comment-only lines through `CheckHoldStateSafety` (they never
   move the machine) so switches work while paused.
 - Move the plugin to its own repo (`ncsender-plugin-ha-switches`) and list it in
