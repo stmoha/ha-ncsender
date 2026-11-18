@@ -10,6 +10,12 @@ Status as of 2026-11-17. Keep this current — it replaces chat history as the p
   with v0.4.0's readme/CHANGELOG edits), drop the `## Unreleased` heading, consider debouncing the
   WLED strip's `job_progress` trigger. Workflows need owner approval to run (first-time contributor).
 
+## Owner's HA config (tracked)
+- `examples/automations/` — the seven CNC automations, the Live Activity script, and the helper
+  template, with `YOUR_*` placeholders. The owner's live HA copy has real entity IDs
+  (`notify.mobile_app_iphone_24`, chiller/air/dust-collector switches). When the live config changes,
+  update the example to match; when the integration's entity contract changes, update both.
+
 ## Next: "HA Switches" — HA-controlled buttons on ncSender's screen with zero HA-side setup
 
 **Problem.** Aux-output switches (v0.4.0) are limited to the board's real unclaimed outputs (a few),

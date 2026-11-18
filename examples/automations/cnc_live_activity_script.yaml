@@ -1,0 +1,72 @@
+# Script: CNC Live Activity update — iOS Dynamic Island / Lock Screen Live Activity.
+# Settings → Scripts → Create → ⋮ → Edit in YAML → paste → Save (entity id becomes
+# script.cnc_live_activity_update, which cnc_automations.yaml calls).
+#
+# Phases: running → "Cutting · Run 42%" with ticking countdown; paused → frozen;
+# tool-changing → "Tool change → T3" (tool number from sensor.ncsender_tool_change).
+# Ends via clear_notification with tag cnc_job (see the Clear automation).
+
+alias: CNC Live Activity update
+mode: queued
+max: 10
+fields:
+  message:
+    description: Optional override for the one-line status (expanded view)
+    example: Cutting
+  critical_text:
+    description: Optional override for the compact island pill
+    example: Run 42%
+  silent:
+    default: true
+sequence:
+  - variables:
+      js: "{{ states('sensor.ncsender_job_status') }}"
+      ss: "{{ states('sensor.ncsender_sender_status') }}"
+      pct: "{{ states('sensor.ncsender_job_progress') | int(0) }}"
+      rem: "{{ states('sensor.ncsender_job_time_remaining') | int(0) }}"
+      tool_txt: >-
+        {% set t = state_attr('sensor.ncsender_tool_change', 'requested_tool') %}
+        {{ 'T' ~ t if t not in [none, 'None', ''] else 'tool' }}
+      phase: >-
+        {% if ss == 'tool-changing' %}toolchange
+        {%- elif js == 'paused' or ss == 'hold' %}paused
+        {%- elif js == 'running' %}running
+        {%- else %}other{% endif %}
+      msg: >-
+        {% if message is defined and message %}{{ message }}
+        {%- elif phase == 'toolchange' %}Tool change → {{ tool_txt }}
+        {%- elif phase == 'paused' %}Paused
+        {%- elif phase == 'running' %}Cutting
+        {%- else %}{{ js | capitalize }}{% endif %}
+      pill: >-
+        {% if critical_text is defined and critical_text %}{{ critical_text }}
+        {%- elif phase == 'toolchange' %}{{ tool_txt }} swap
+        {%- elif phase == 'paused' %}Paused {{ pct }}%
+        {%- elif phase == 'running' %}Run {{ pct }}%
+        {%- else %}{{ js | capitalize }}{% endif %}
+      icon_v: >-
+        {{ {'toolchange': 'mdi:tools', 'paused': 'mdi:pause-circle',
+            'running': 'mdi:router'}.get(phase, 'mdi:router') }}
+      color_v: >-
+        {{ {'toolchange': '#FFA726', 'paused': '#FFEE58',
+            'running': '#26C6DA'}.get(phase, '#26C6DA') }}
+      tick: "{{ phase == 'running' and rem > 30 }}"
+  - action: notify.mobile_app_YOUR_PHONE
+    data:
+      title: "CNC — {{ states('sensor.ncsender_job_file') }}"
+      message: "{{ msg }}"
+      data: >-
+        {% set d = {
+          'tag': 'cnc_job',
+          'live_update': true,
+          'silent': silent | default(true),
+          'progress': pct,
+          'progress_max': 100,
+          'critical_text': pill,
+          'notification_icon': icon_v,
+          'notification_icon_color': color_v
+        } %}
+        {% if tick %}
+          {% set d = dict(d, chronometer=true, when=rem, when_relative=true) %}
+        {% endif %}
+        {{ d }}

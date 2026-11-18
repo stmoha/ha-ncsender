@@ -1,0 +1,231 @@
+# CNC automations for the ncSender integration — the owner's working set.
+#
+# These are plain automations (not blueprints — see ../../blueprints for those).
+# Paste one block at a time: Settings → Automations → Create → ⋮ → Edit in YAML.
+# Replace the YOUR_* placeholders with your own entities before saving.
+#
+# Requires ncSender Pro ≥ Nov 2026 builds (job_status "completed" on success,
+# sender_status "tool-changing" during M6). On older Pro builds see
+# ../../CLAUDE.md → "Quirks" for the fallbacks.
+#
+# The Live Activity automation calls the script in cnc_live_activity_script.yaml.
+
+- alias: CNC — Chiller follows spindle
+  description: 'Chiller on immediately when the spindle starts; off 5 minutes after it stops. The ''for:''
+    on the off-trigger doubles as a fail-safe: if the bridge drops (spindle sensor goes unavailable),
+    the timer cancels and the chiller stays running.'
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.ncsender_spindle
+    to: 'on'
+    id: spindle_on
+  - trigger: state
+    entity_id: binary_sensor.ncsender_spindle
+    to: 'off'
+    for: 00:05:00
+    id: spindle_off
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: spindle_on
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.YOUR_CHILLER
+        data: {}
+    - conditions:
+      - condition: trigger
+        id: spindle_off
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.YOUR_CHILLER
+        data: {}
+  mode: restart
+- alias: CNC — Air assist follows laser
+  description: Air assist on the moment the laser fires; off 10 seconds after it stops. The 10s tail also
+    rides through the brief OFF gaps the sensor reports during rapids between cuts, so the pump isn't
+    chattering on/off mid-job.
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.ncsender_laser
+    to: 'on'
+    id: laser_on
+  - trigger: state
+    entity_id: binary_sensor.ncsender_laser
+    to: 'off'
+    for: 00:00:10
+    id: laser_off
+    enabled: false
+  - trigger: state
+    entity_id:
+    - sensor.ncsender_job_status
+    to:
+    - stopped
+    - paused
+    - completed
+    - error
+    id: job_finished
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: laser_on
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.YOUR_AIR_ASSIST
+        data: {}
+    - conditions:
+      - condition: trigger
+        id:
+        - job_finished
+      sequence:
+      - delay:
+          hours: 0
+          minutes: 0
+          seconds: 10
+          milliseconds: 0
+      - action: switch.turn_off
+        target:
+          entity_id: switch.YOUR_AIR_ASSIST
+        data: {}
+  mode: restart
+- alias: CNC — Job complete (persistent alert)
+  description: Fires once when ncSender reports the job finished successfully. Critical/persistent so
+    it breaks through Focus modes.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: sensor.ncsender_job_status
+    from:
+    - running
+    - paused
+    to: completed
+  conditions: []
+  actions:
+  - action: notify.mobile_app_YOUR_PHONE
+    data:
+      title: CNC job complete ✅
+      message: '{{ states(''sensor.ncsender_job_file'') }} finished in {% set s = state_attr(''sensor.ncsender_job_status'',
+        ''runtime_sec'') | int(0) %} {{ (s // 3600) }}h {{ (s % 3600) // 60 }}m.'
+      data:
+        tag: cnc-job-complete
+        push:
+          sound:
+            name: default
+            critical: 1
+            volume: 0.8
+        persistent: true
+- alias: CNC — Job Live Activity
+  description: Start / update the Dynamic Island while a job runs, incl. tool changes.
+  triggers:
+  - trigger: state
+    entity_id: sensor.ncsender_job_status
+    to:
+    - running
+    - paused
+  - trigger: state
+    entity_id:
+    - sensor.ncsender_job_progress
+    - sensor.ncsender_job_time_remaining
+  - trigger: state
+    entity_id: sensor.ncsender_sender_status
+    to: tool-changing
+  - trigger: state
+    entity_id: sensor.ncsender_sender_status
+    from: tool-changing
+  conditions:
+  - condition: state
+    entity_id: sensor.ncsender_job_status
+    state:
+    - running
+    - paused
+  actions:
+  - action: script.cnc_live_activity_update
+  mode: queued
+  max: 10
+- alias: CNC — Dust collector follows M8
+  description: Dust collector on when G-code issues M8 (flood coolant), off 30 s after M9/M30. The tail
+    catches residual dust and prevents relay cycling between closely spaced operations. Sensor going unavailable
+    (bridge down) never completes the off-timer — fails toward running.
+  triggers:
+  - trigger: state
+    entity_id:
+    - binary_sensor.ncsender_flood_coolant
+    to:
+    - 'on'
+    id: dc_on
+  - trigger: state
+    entity_id:
+    - binary_sensor.ncsender_flood_coolant
+    to:
+    - 'off'
+    for:
+      hours: 0
+      minutes: 0
+      seconds: 0
+    id: dc_off
+    enabled: true
+  actions:
+  - choose:
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''dc_on'' }}'
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.YOUR_DUST_COLLECTOR
+    - conditions:
+      - condition: template
+        value_template: '{{ trigger.id == ''dc_off'' }}'
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.YOUR_DUST_COLLECTOR
+  mode: restart
+- alias: CNC — Clear Live Activity after job
+  description: End the Live Activity when the job completes, stops, or errors.
+  mode: restart
+  triggers:
+  - trigger: state
+    entity_id: sensor.ncsender_job_status
+    from:
+    - running
+    - paused
+    to:
+    - completed
+    - stopped
+    - error
+    for:
+      seconds: 20
+  conditions: []
+  actions:
+  - action: notify.mobile_app_YOUR_PHONE
+    data:
+      message: clear_notification
+      data:
+        tag: cnc_job
+- alias: CNC — Job error (alert)
+  description: ncSender reported the job ended in error or the controller alarmed.
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: sensor.ncsender_job_status
+    to: error
+  - trigger: state
+    entity_id: sensor.ncsender_machine_state
+    to: Alarm
+  conditions: []
+  actions:
+  - action: notify.mobile_app_YOUR_PHONE
+    data:
+      title: CNC job stopped ⚠️
+      message: '{{ states(''sensor.ncsender_job_file'') }} at line {{ state_attr(''sensor.ncsender_job_status'',
+        ''current_line'') }} of {{ state_attr(''sensor.ncsender_job_status'', ''total_lines'') }}. {%
+        set e = states(''sensor.ncsender_last_error'') %} {{ e if e not in [''unknown'', ''unavailable'',
+        ''none'', ''''] else ''No error text from controller.'' }}'
+      data:
+        tag: cnc-job-error
+        persistent: true
