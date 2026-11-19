@@ -44,6 +44,10 @@
 - HA Switches plugin 0.1.8: `#` notes in the switch list. Start a line with `#` to comment it out
   (handy for test switches), or put a note after an entry. The list is now saved as typed, so notes
   and commented-out lines survive Save.
+- HA Switches plugin 0.1.9: "Edit switches" is now an **Edit HA Switches settings** bar with a chevron
+  and a "Click to open / Click to close" hint, plus a *Close settings* button next to Save. The switch
+  list is coloured with ncSender's own editor colours (dark and light themes): names, entity IDs,
+  `hold`/`slow`, `#` notes, and anything that isn't an entity ID underlined in red, with a key below.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

@@ -25,7 +25,7 @@ file you downloaded can't switch your other devices.
 2. **ncSender** → Settings → Plugins → *Install Plugin* → choose the ZIP
    (`com.cncdocs.ha-switches_<version>.zip`, built with `python ncsender-plugin/package.py`).
    Press Ctrl+F5 if the Plugins tab doesn't show **HA Switches** yet.
-3. Open **HA Switches** → *Edit switches*:
+3. Open **HA Switches** → *Edit HA Switches settings* (the bar at the bottom: click it to open, click it again or press *Close settings* to close):
    - Paste the webhook URL into *Home Assistant webhook URL*. *Find it in Home Assistant ↗* opens
      the integration page.
    - List the switches, one per line, then **Save**:

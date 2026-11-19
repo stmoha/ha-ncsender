@@ -60,6 +60,63 @@
     #has-root textarea { min-height: 160px; }
     #has-root .has-empty { padding: 18px; border: 1px dashed var(--color-border, #8886); border-radius: 10px; text-align: center; }
     #has-root .has-edit { margin-top: 24px; }
+
+    /* Settings disclosure: a bar with a chevron that turns, saying how to open/close */
+    #has-root button.has-disclosure { display: flex !important; align-items: center; gap: 12px; width: 100% !important;
+      min-height: 52px !important; padding: 10px 16px !important; border-radius: 10px !important; cursor: pointer !important;
+      background: var(--color-surface, #8881) !important; color: inherit !important; font: inherit !important;
+      font-weight: 600 !important; font-size: 1rem !important; text-align: left;
+      border: 1px solid var(--color-border, #8884) !important; }
+    #has-root button.has-disclosure:hover { border-color: var(--color-accent, #18bcf2) !important; }
+    #has-root .has-chev { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; display: inline-flex;
+      align-items: center; justify-content: center; background: var(--color-accent, #18bcf2); color: #fff;
+      font-size: 0.8rem; transition: transform 0.15s; }
+    #has-root .has-dtitle { flex: 1 1 auto; }
+    #has-root .has-dhint { flex: 0 0 auto; font-weight: 400; font-size: 0.85rem; opacity: 0.7; }
+    #has-root .has-edit.is-open button.has-disclosure { border-radius: 10px 10px 0 0 !important;
+      border-color: var(--color-accent, #18bcf2) !important; }
+    #has-root .has-edit.is-open .has-chev { transform: rotate(90deg); }
+    #has-root #has-editor { border: 1px solid var(--color-accent, #18bcf2); border-top: none;
+      border-radius: 0 0 10px 10px; padding: 4px 20px 20px; }
+    #has-root .has-savebar { display: flex; gap: 12px; align-items: center; margin-top: 14px; flex-wrap: wrap; }
+    #has-root button.has-close { background: transparent !important; color: inherit !important; flex: 0 0 auto !important;
+      min-height: 40px !important; border: 1px solid var(--color-border, #8886) !important; }
+    #has-root .has-savebar .has-status { flex: 1 1 200px; }
+
+    /* Switch list in ncSender's editor colours (Monaco themes ncsender-dark / ncsender-light) */
+    #has-root .has-code { position: relative; border: 1px solid var(--color-border, #8886); border-radius: 6px;
+      background: #1e1e1e; overflow: hidden; }
+    #has-root .has-code textarea, #has-root .has-code .has-hl { margin: 0 !important; border: 0 !important;
+      padding: 12px 14px !important; box-sizing: border-box; font-family: Consolas, 'Courier New', ui-monospace, monospace !important;
+      font-size: 14px !important; line-height: 21px !important; letter-spacing: 0 !important; tab-size: 4;
+      white-space: pre !important; overflow-wrap: normal !important; word-break: normal !important; }
+    #has-root .has-code textarea { position: relative; z-index: 1; display: block; width: 100%; min-height: 160px;
+      resize: vertical; overflow-x: auto; overflow-y: hidden; background: transparent !important; color: transparent !important;
+      caret-color: #d4d4d4; -webkit-text-fill-color: transparent; border-radius: 0 !important; outline: none; box-shadow: none !important; }
+    #has-root .has-code:focus-within { border-color: var(--color-accent, #18bcf2); }
+    #has-root .has-code textarea::placeholder { color: #858585; -webkit-text-fill-color: #858585; }
+    #has-root .has-code textarea::selection { background: rgba(38, 79, 120, 0.55); -webkit-text-fill-color: transparent; }
+    #has-root .has-code .has-hl { position: absolute; inset: 0; overflow: hidden; pointer-events: none; color: #d4d4d4; }
+    #has-root .hl-comment { color: #6a9955; font-style: italic; }
+    #has-root .hl-name { color: #9cdcfe; }
+    #has-root .hl-domain { color: #c586c0; }
+    #has-root .hl-object { color: #4ec9b0; }
+    #has-root .hl-flag { color: #dcdcaa; font-weight: 700; }
+    #has-root .hl-punct { color: #858585; }
+    #has-root .hl-bad { color: #f14c4c; text-decoration: wavy underline #f14c4c; }
+    body.theme-light #has-root .has-code { background: #f8f8f8; }
+    body.theme-light #has-root .has-code textarea { caret-color: #1f1f1f; }
+    body.theme-light #has-root .has-code textarea::selection { background: rgba(173, 214, 255, 0.6); }
+    body.theme-light #has-root .has-code .has-hl { color: #1f1f1f; }
+    body.theme-light #has-root .hl-comment { color: #008000; }
+    body.theme-light #has-root .hl-name { color: #0070c1; }
+    body.theme-light #has-root .hl-domain { color: #af00db; }
+    body.theme-light #has-root .hl-object { color: #267f99; }
+    body.theme-light #has-root .hl-flag { color: #795e26; }
+    body.theme-light #has-root .hl-punct { color: #999999; }
+    body.theme-light #has-root .hl-bad { color: #c72828; text-decoration-color: #c72828; }
+    #has-root .has-legend { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.8rem; margin: 8px 0 0;
+      font-family: Consolas, 'Courier New', ui-monospace, monospace; }
   </style>
 
   <div class="has-top">
@@ -72,8 +129,12 @@
   <div id="has-switches" class="has-grid"></div>
   <p class="has-note" id="has-note"></p>
 
-  <div class="has-edit">
-    <button type="button" class="has-btn has-link" id="has-toggle-edit">Edit switches</button>
+  <div class="has-edit" id="has-edit">
+    <button type="button" class="has-disclosure" id="has-toggle-edit" aria-expanded="false" aria-controls="has-editor">
+      <span class="has-chev" aria-hidden="true"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></span>
+      <span class="has-dtitle">Edit HA Switches settings</span>
+      <span class="has-dhint" id="has-dhint">Click to open</span>
+    </button>
     <div id="has-editor" style="display:none">
       <label class="has-label" for="has-url">Home Assistant webhook URL</label>
       <input class="has-input" id="has-url" type="url" spellcheck="false"
@@ -93,9 +154,21 @@
         for them (e.g. <code>Compressor, switch.compressor_safe, slow</code>). Both can be combined.
         Anything after <code>#</code> is a note: start a line with <code>#</code> to comment it out.
       </p>
-      <textarea id="has-text" spellcheck="false" placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist   # on the laser too&#10;# Test lamp, light.bench"></textarea>
-      <div class="has-row" style="margin-top:12px; align-items:center">
+      <div class="has-code">
+        <pre class="has-hl" id="has-hl" aria-hidden="true"></pre>
+        <textarea id="has-text" spellcheck="false" wrap="off" autocomplete="off" autocapitalize="off"
+                  placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist   # on the laser too&#10;# Test lamp, light.bench"></textarea>
+      </div>
+      <div class="has-legend" aria-hidden="true">
+        <span class="hl-name">Name</span>
+        <span><span class="hl-domain">switch</span><span class="hl-punct">.</span><span class="hl-object">entity</span></span>
+        <span class="hl-flag">hold slow</span>
+        <span class="hl-comment"># note / commented out</span>
+        <span class="hl-bad">not an entity ID</span>
+      </div>
+      <div class="has-savebar">
         <button type="button" class="has-btn has-plain" id="has-save">Save</button>
+        <button type="button" class="has-btn has-close" id="has-close-edit"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" style="margin-right:6px;vertical-align:-1px"><path d="M5 15l7-7 7 7"/></svg>Close settings</button>
         <span class="has-status" id="has-save-status"></span>
       </div>
     </div>
@@ -340,9 +413,9 @@
     haLink.style.display = '';
     noteEl.innerHTML = direct
       ? 'Buttons talk to Home Assistant directly, so they work with the controller off or a job paused. Only devices allowed under <b>ncSender → Configure → Devices ncSender may switch</b> respond.'
-      : 'Each button sends a comment line such as <code>(HA switch.shop_lights ON)</code> through the controller, so it needs the controller connected and no job paused. Add the webhook URL under <b>Edit switches</b> to switch directly.';
+      : 'Each button sends a comment line such as <code>(HA switch.shop_lights ON)</code> through the controller, so it needs the controller connected and no job paused. Add the webhook URL under <b>Edit HA Switches settings</b> to switch directly.';
     if (!cfg.switches.length) {
-      var empty = el('div', 'has-empty', 'No switches yet. Tap “Edit switches” below and add one per line, e.g. ');
+      var empty = el('div', 'has-empty', 'No switches yet. Open “Edit HA Switches settings” below and add one per line, e.g. ');
       empty.appendChild(el('code', null, 'Chiller, switch.chiller'));
       grid.appendChild(empty);
       return;
@@ -443,6 +516,45 @@
     });
     return { switches: out, bad: bad };
   }
+  // Colour the list the way ncSender's G-code editor colours code: a <pre> with the
+  // same font sits under the textarea, whose own text is transparent.
+  var hl = document.getElementById('has-hl');
+  function esc(t) { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+  function span(cls, t) { return t ? '<span class="' + cls + '">' + esc(t) + '</span>' : ''; }
+  function hlLine(line) {
+    var hash = line.indexOf('#');
+    var code = hash >= 0 ? line.slice(0, hash) : line;
+    var note = hash >= 0 ? span('hl-comment', line.slice(hash)) : '';
+    if (!code.trim()) return esc(code) + note;
+    var segs = code.split(',');
+    var roles = segs.map(function () { return 'hl-name'; });
+    var i = segs.length - 1;
+    while (i > 0 && /^(hold|slow)$/i.test(segs[i].trim())) roles[i--] = 'hl-flag';
+    roles[i] = 'entity';
+    return segs.map(function (seg, k) {
+      var lead = seg.match(/^\s*/)[0];
+      var rest = seg.slice(lead.length);
+      var trail = rest.match(/\s*$/)[0];
+      var core = rest.slice(0, rest.length - trail.length);
+      var out;
+      if (roles[k] !== 'entity') out = span(roles[k], core);
+      else if (ENTITY_RE.test(core.toLowerCase())) {
+        var dot = core.indexOf('.');
+        out = span('hl-domain', core.slice(0, dot)) + span('hl-punct', '.') + span('hl-object', core.slice(dot + 1));
+      } else out = core ? span('hl-bad', core) : '<span class="hl-bad"> </span>';
+      return esc(lead) + out + esc(trail);
+    }).join(span('hl-punct', ',')) + note;
+  }
+  function highlight() {
+    hl.innerHTML = text.value.split('\n').map(hlLine).join('\n') + '\n ';
+    // Grow with the content so the box never scrolls vertically (keeps the layers aligned).
+    text.style.height = 'auto';
+    text.style.height = Math.max(160, text.scrollHeight) + 'px';
+    hl.scrollLeft = text.scrollLeft;
+  }
+  text.addEventListener('input', highlight);
+  text.addEventListener('scroll', function () { hl.scrollLeft = text.scrollLeft; hl.scrollTop = text.scrollTop; });
+
   function toLines(list) {
     return list.map(function (s) { return s.name + ', ' + s.entity + (s.hold ? ', hold' : '') + (s.slow ? ', slow' : ''); }).join('\n');
   }
@@ -487,7 +599,7 @@
     if (downInside || dirty()) {
       e.stopPropagation(); e.preventDefault();
       if (!downInside) {
-        editor.style.display = '';
+        setEditorOpen(true);
         setStatus('has-dirty', 'Unsaved changes: Save first, or close with × to discard');
       }
     }
@@ -528,15 +640,29 @@
         if (draft && typeof draft.text === 'string' && (draft.text !== saved.text || (draft.url || '').trim() !== saved.url)) {
           text.value = draft.text;
           urlInput.value = draft.url || '';
-          editor.style.display = '';
+          setEditorOpen(true);
           setStatus('has-dirty', 'Restored unsaved edits');
         }
-        if (!cfg.switches.length) editor.style.display = '';
+        highlight();
+        if (!cfg.switches.length) setEditorOpen(true);
       });
   }
 
-  document.getElementById('has-toggle-edit').addEventListener('click', function () {
-    editor.style.display = editor.style.display === 'none' ? '' : 'none';
+  // ---------- settings panel: open / close ----------
+  var editWrap = document.getElementById('has-edit');
+  var editBtn = document.getElementById('has-toggle-edit');
+  var editHint = document.getElementById('has-dhint');
+  function setEditorOpen(open) {
+    editor.style.display = open ? '' : 'none';
+    editWrap.classList.toggle('is-open', open);
+    editBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    editHint.textContent = open ? 'Click to close' : 'Click to open';
+    if (open) highlight();
+  }
+  editBtn.addEventListener('click', function () { setEditorOpen(editor.style.display === 'none'); });
+  document.getElementById('has-close-edit').addEventListener('click', function () {
+    setEditorOpen(false);
+    editBtn.scrollIntoView({ block: 'nearest' });
   });
 
   document.getElementById('has-save').addEventListener('click', function () {
@@ -555,6 +681,7 @@
       apply(c);
       text.value = saved.text;
       urlInput.value = saved.url;
+      highlight();
       store(function (ls) { ls.removeItem(DRAFT_KEY); });
       setStatus('has-ok', 'Saved ✓');
     }).catch(function (err) {
