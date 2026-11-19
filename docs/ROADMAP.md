@@ -20,8 +20,9 @@ Status as of 2026-11-18. Keep this current — it replaces chat history as the p
 and mirroring each onto an HA device needs an automation or a label per switch — too much setup for
 other users.
 
-**Constraint.** The ncSender plugin *JS engine* (Jint on pro-v2) has **no network access**; a plugin's
-server-side code cannot talk to HA. But a plugin's **dialog HTML runs in the ncSender page**, so it can
+**Constraint (when built; since lifted upstream, see "Plugin web requests" under Next steps).** The
+ncSender plugin *JS engine* (Jint on pro-v2) had **no network access**; a plugin's server-side code
+could not talk to HA. But a plugin's **dialog HTML runs in the ncSender page**, so it can
 `fetch` ncSender's own REST API (`/api/send-command`, `/api/plugins/<id>/settings`) — the G-code
 Explorer plugin already does. That is the path used: no JS engine code at all.
 
@@ -119,10 +120,39 @@ here: the HA harness imports `fcntl`/`resource`, so it only runs on Linux/macOS 
   pro-v2 an item can only open the plugin's dialog, not run code. So a per-switch shortcut is possible
   only as a hack (one menu item per switch slot, dialog sends TOGGLE and closes itself). Upstream
   shortcuts for Aux I/O outputs are the clean route.
-- *Plugin web requests (upstream, Nov 2026, "Vaultix Sync"):* plugins can now ask for web requests,
-  so a plugin could call HA's REST API directly. Not used: it needs an HA token stored in plugin
-  settings, which anyone on the LAN can read from ncSender (`/api/plugins/<id>/settings`, no auth).
-- *Upstream ask for Francis:* let comment-only lines through `CheckHoldStateSafety` (they never
+- *Plugin web requests (upstream, Nov 2026; read in community `main` @ 89473283,
+  `Plugins/JsPluginEngine.Host.cs`):* server-side JS plugins now get, per manifest `permissions`:
+  - `pluginContext.http.request({method,url,headers,body,timeoutMs}, cb)`: async, off the engine lock
+    (needs `"network"`). No WebSocket, so it can poll but not subscribe.
+  - `pluginContext.storage.get()/set()`: a private JSON file **not** served by the settings API
+    (made for sign-in tokens). Ends the "token readable on the LAN" objection.
+  - `pluginContext.setInterval`, `sendCommand`, `getServerState`, and `onRequest(payload)`, which the
+    plugin's own window reaches with `POST /api/plugins/<id>/request`.
+  - Permissions are granted from the manifest at load; no consent prompt was found in the client.
+
+  **What it unlocks — proposed "HA bridge" mode (not built):**
+  1. *Integration:* register an HA **webhook** (`webhook` dependency, `local_only`), show its URL in
+     Configure. Body `{"entity_id","action"}` → same allowlist + `homeassistant.*` call as today;
+     `{"action":"states"}` → states of the allowlisted entities. No HA token ever leaves HA; the
+     webhook ID is the only secret and is limited to the allowlist.
+  2. *Plugin:* add a commands file with `events: ["onBeforeCommand", "background"]`,
+     `permissions: ["network"]`; keep the webhook URL in `storage`.
+     - `onBeforeCommand` swallows `(HA …)` lines (returns `[]`) and POSTs them to the webhook.
+       This runs in `PluginCommandProcessor` **before** `CheckHoldStateSafety` and before any
+       controller send, so switches work **while paused and with no controller connected** — both
+       current limits gone, no upstream Hold change needed. Same for the main-screen HA aux outputs
+       (PR 1 drafts) and lines in a G-code file.
+     - `setInterval` polls `states` (e.g. 2 s) so the dialog shows real on/off.
+  3. Fallback: with no webhook configured, the plugin does nothing and lines go to the controller as
+     today, so the comment path keeps working.
+
+  **Open points before building:** whether a swallowed **job** line is processed at stream time
+  (switch fires when the line is reached) or ahead of it; the client sees `status: "skipped"` for a
+  swallowed line (the dialog currently shows that as an error; the plugin should answer via its window
+  instead); whether the owner's **Pro** build has the same `http`/`storage` API (only the community
+  source was read); PR 1's switch follows `cnc-command-result`, which a swallowed line never emits.
+  The plugin would then need to drive that state, or the PR keeps both paths.
+- *Upstream ask for Francis (moot if the HA bridge mode above is built):* let comment-only lines through `CheckHoldStateSafety` (they never
   move the machine) so switches work while paused.
 - Move the plugin to its own repo (`ncsender-plugin-ha-switches`) and list it in
   `siganberg/ncSender.plugins-registry` once the owner is happy with it.
