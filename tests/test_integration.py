@@ -145,9 +145,10 @@ async def test_ha_switch_commands(hass, fake_ncsender, hass_client_no_auth):
     webhook_id = entry.data["webhook_id"]
     client = await hass_client_no_auth()
     url = f"/api/webhook/{webhook_id}"
+    # as a browser on ncSender's page sends it: text/plain, with an Origin header
     resp = await client.post(url, data=json.dumps({"entity_id": "input_boolean.chiller", "action": "on"}),
-                             headers={"Content-Type": "text/plain"})
-    assert resp.status == 200 and resp.headers["Access-Control-Allow-Origin"] == "*"
+                             headers={"Content-Type": "text/plain", "Origin": "http://ncsender:8090"})
+    assert resp.status == 200 and resp.headers.get("Access-Control-Allow-Origin") in ("*", "http://ncsender:8090")
     assert (await resp.json())["ok"] is True
     assert hass.states.get("input_boolean.chiller").state == "on"
     resp = await client.post(url, data=json.dumps({"entity_id": "input_boolean.door_lock", "action": "on"}))

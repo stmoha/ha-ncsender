@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0 — unreleased (betas: v0.5.0b1, v0.5.0b2; pre-releases from `feature/ha-switches`)
+## 0.5.0 — unreleased (betas: v0.5.0b1–b3; pre-releases from `feature/ha-switches`)
 - **Switch HA devices from ncSender.** The integration now acts on comment lines of the form
   `(HA <entity_id> ON|OFF|TOGGLE)` once the controller acknowledges them, calling
   `homeassistant.turn_on` / `turn_off` / `toggle`. Only entities picked in the new option
@@ -30,6 +30,8 @@
 - HA Switches plugin 0.1.4: optional hold-to-press per switch (`Name, entity_id, hold`). Both
   buttons then need a 1-second press, like ncSender's own *Hold* outputs, for devices such as the
   controller's power that shouldn't switch on a stray click.
+- Fixed (b3): the webhook dropped every browser request ("no connection" in the plugin). It set
+  its own CORS header, which HA's CORS handling refuses; HA's webhook view already allows any origin.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

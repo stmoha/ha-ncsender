@@ -29,9 +29,10 @@ from .const import CONF_HA_SWITCHES, CONF_WEBHOOK_ID, DOMAIN, EVENT_HA_COMMAND
 
 _LOGGER = logging.getLogger(__name__)
 
-# The plugin runs in ncSender's page, a different origin from HA. It posts text/plain
-# (a "simple" request, so no CORS preflight); this header lets it read the answer.
-_CORS = {"Access-Control-Allow-Origin": "*"}
+# The plugin runs in ncSender's page, a different origin from HA, and posts text/plain
+# (a "simple" request, so no CORS preflight). HA's webhook view already allows CORS from
+# any origin. Never set Access-Control-* headers here: aiohttp_cors asserts they're unset
+# and drops the connection when a browser (which always sends Origin) calls.
 
 
 def allowed_entities(entry: ConfigEntry) -> list[str]:
@@ -87,7 +88,7 @@ def _states(hass: HomeAssistant, entry: ConfigEntry) -> dict[str, Any]:
 
 
 def _reply(status: int, body: dict[str, Any]) -> web.Response:
-    return web.json_response(body, status=status, headers=_CORS)
+    return web.json_response(body, status=status)
 
 
 def ensure_webhook_id(hass: HomeAssistant, entry: ConfigEntry) -> str:
