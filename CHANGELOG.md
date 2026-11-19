@@ -6,7 +6,7 @@
   `homeassistant.turn_on` / `turn_off` / `toggle`. Only entities picked in the new option
   *Devices ncSender may switch* (Configure; switches, lights, fans, input booleans, scripts) are
   acted on, so a downloaded G-code file can't reach anything else. Works from the new
-  **HA Switches** ncSender plugin (prototype in `ncsender-plugin/`) and from comments inside a job.
+  **HA Switches** ncSender plugin ([own repo](https://github.com/stmoha/ncsender-plugin-ha-switches)) and from comments inside a job.
 - Every such command fires an `ncsender_ha_command` event (`entity_id`, `service`, `allowed`)
   for debugging and automations.
 - **Corrected:** the *Aux output pins* help text and readme no longer claim unused pin numbers work
@@ -48,6 +48,9 @@
   and a "Click to open / Click to close" hint, plus a *Close settings* button next to Save. The switch
   list is coloured with ncSender's own editor colours (dark and light themes): names, entity IDs,
   `hold`/`slow`, `#` notes, and anything that isn't an entity ID underlined in red, with a key below.
+- The HA Switches plugin moved to its own repo,
+  [stmoha/ncsender-plugin-ha-switches](https://github.com/stmoha/ncsender-plugin-ha-switches)
+  (history kept); its releases carry the install ZIP and feed ncSender's plugin updates.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

@@ -96,9 +96,10 @@ Settings → Devices & services → ncSender → **Configure**:
 
 ## Controlling Home Assistant devices from ncSender's screen
 
-### HA Switches plugin (v0.5.0+, prototype)
+### HA Switches plugin (v0.5.0+)
 
-Install the **HA Switches** ncSender plugin from [`ncsender-plugin/`](ncsender-plugin/README.md),
+Install the **HA Switches** ncSender plugin from its own repo, [stmoha/ncsender-plugin-ha-switches](https://github.com/stmoha/ncsender-plugin-ha-switches)
+(ZIP on the latest release),
 add your devices (`Chiller, switch.chiller`, one per line), and allow the same entities in
 Configure → *Devices ncSender may switch*. No automation, no aux pin, and no limit on how many.
 
