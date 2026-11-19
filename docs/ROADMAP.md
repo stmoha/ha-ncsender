@@ -7,8 +7,8 @@ Status as of 2026-11-18. Keep this current — it replaces chat history as the p
 - **v0.5.0 "HA Switches"** — branch `feature/ha-switches`: integration half done and tested
   standalone; webhook route in betas b2/b3. The plugin moved to its own repo
   [stmoha/ncsender-plugin-ha-switches](https://github.com/stmoha/ncsender-plugin-ha-switches) at
-  0.1.9 (2026-11-19). Next: publish b3, owner tests, then PR → merge → **v0.5.0 release**, and
-  only then the ncSender plugin-registry PR (siganberg/ncSender.plugins-registry, `plugins.json`;
+  0.1.9 (2026-11-19). v0.5.0 released 2026-11-19 (after b3 was tested on the owner's machine); then
+  the ncSender plugin-registry PR (siganberg/ncSender.plugins-registry, `plugins.json`;
   the entry is ready in the plugin repo's `registry-entry.json`, bump its `version` first).
 
 ## Owner's HA config (tracked)
