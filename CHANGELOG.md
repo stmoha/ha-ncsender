@@ -35,6 +35,9 @@
 - HA Switches plugin 0.1.5: with the webhook set, each device is one toggle showing its live state
   (hold switches need a 1-second press on the toggle); unavailable or not-allowed devices show red
   and can't be pressed. Without a webhook the plugin keeps On/Off buttons, since it can't see state.
+- HA Switches plugin 0.1.6: after a tap the toggle moves at once and pulses "Switching on…" until
+  Home Assistant reports the new state (checked every 0.5 s), instead of flicking back while a device
+  such as a Shelly catches up. If nothing changes within 10 s it goes back and says so.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

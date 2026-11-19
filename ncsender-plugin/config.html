@@ -38,6 +38,8 @@
     #has-root button.has-toggle.is-on .has-track { background: #fff3; }
     #has-root button.has-toggle.is-on .has-knob { left: 28px; }
     #has-root .has-tlabel { font-size: 1.05rem; }
+    #has-root button.has-toggle.is-pending { animation: has-pulse 0.9s ease-in-out infinite; }
+    @keyframes has-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     #has-root .has-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #fff4; pointer-events: none; }
     #has-root .has-fill.go { width: 100%; transition: width 1s linear; }
     #has-root .has-holdtag { font-family: inherit; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
@@ -182,7 +184,10 @@
     if (!c) return;
     c.current = state;
     if (c.toggle) {
-      if (c.pending) return;
+      if (c.pending) {
+        if (state !== c.target) return;      // HA hasn't caught up yet: keep pulsing
+        settle(c);
+      }
       var known = state === 'on' || state === 'off';
       c.toggle.classList.toggle('is-on', state === 'on');
       c.toggle.classList.toggle('is-bad', !known && state != null);
@@ -198,6 +203,36 @@
     c.on.classList.toggle('has-active', state === 'on');
     c.off.classList.toggle('has-active', state === 'off');
   }
+  // A switch is in flight from the moment it's pressed until Home Assistant reports
+  // the new state (devices such as Shellies report a moment after the command).
+  var CONFIRM_MS = 10000, FAST_POLL_MS = 500;
+  function settle(c) {
+    c.pending = false; c.target = null;
+    clearTimeout(c.fastTimer); clearTimeout(c.giveUp);
+    c.toggle.classList.remove('is-pending');
+  }
+  function startPending(c, target) {
+    c.pending = true; c.target = target;
+    c.toggle.disabled = true;
+    c.toggle.classList.add('is-pending');
+    c.toggle.classList.toggle('is-on', target === 'on');   // move the knob right away
+    c.toggle.classList.remove('is-bad');
+    c.label.textContent = target === 'on' ? 'Switching on\u2026' : 'Switching off\u2026';
+    c.giveUp = setTimeout(function () {
+      if (!c.pending) return;
+      var was = c.current;
+      settle(c);
+      c.status.className = 'has-status has-err';
+      c.status.textContent = 'Home Assistant still reports ' + (was || 'no state') + ' after 10 s';
+      showState(c.entity, was);
+    }, CONFIRM_MS);
+  }
+  function fastPoll(c) {
+    if (!c.pending || !alive()) return;
+    poll();
+    c.fastTimer = setTimeout(function () { fastPoll(c); }, FAST_POLL_MS);
+  }
+
   function poll() {
     if (!alive()) { clearInterval(pollTimer); pollTimer = null; return; }
     if (!cfg.webhookUrl) return;
@@ -325,17 +360,22 @@
         toggle.disabled = true;   // until Home Assistant has told us the state
         card.appendChild(toggle);
         card.appendChild(status);
-        var c = cards[s.entity] = { state: state, toggle: toggle, label: label, hold: s.hold, current: null, pending: false };
+        var c = cards[s.entity] = { entity: s.entity, state: state, toggle: toggle, label: label, status: status,
+                                    hold: s.hold, current: null, pending: false, target: null };
         var flip = function () {
-          if (c.current !== 'on' && c.current !== 'off') return;
+          if (c.pending || (c.current !== 'on' && c.current !== 'off')) return;
           var action = c.current === 'on' ? 'OFF' : 'ON';
-          c.pending = true; toggle.disabled = true;
-          label.textContent = action === 'ON' ? 'Switching on…' : 'Switching off…';
           status.className = 'has-status'; status.textContent = '';
+          startPending(c, action.toLowerCase());
           send(s, action).then(function (r) {
-            c.pending = false;
-            if (!r.ok) { status.className = 'has-status has-err'; status.textContent = r.error; }
-            showState(s.entity, r.ok && r.state ? r.state : c.current);
+            if (!r.ok) {
+              var was = c.current;
+              settle(c);
+              status.className = 'has-status has-err'; status.textContent = r.error;
+              return showState(s.entity, was);
+            }
+            if (r.state) showState(s.entity, r.state);   // settles if HA already reports it
+            fastPoll(c);
           });
         };
         if (s.hold) holdToPress(toggle, flip, status);
