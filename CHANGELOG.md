@@ -12,6 +12,8 @@
 - **Corrected:** the *Aux output pins* help text and readme no longer claim unused pin numbers work
   as virtual switches. grblHAL refuses outputs the board doesn't have (`error:39`), so only real,
   unclaimed outputs work. Use *Devices ncSender may switch* for HA devices instead.
+- Fixed "Translation error: UNCLOSED_TAG" under *Devices ncSender may switch* (the help text
+  contained `<entity_id>`, which HA's translation parser reads as a tag).
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
