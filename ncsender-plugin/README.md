@@ -38,6 +38,10 @@ file you downloaded can't switch your other devices.
 
 4. Press **On** / **Off**. With the webhook set, each card shows the device's state.
 
+**Hold to press.** Add `, hold` to a line (e.g. `Controller power, switch.slb_ext, hold`) and
+both its buttons need a 1-second press, with a fill bar showing progress, like ncSender's own
+*Hold* outputs. Use it for anything that shouldn't switch on a stray click.
+
 **Opening it with the controller off.** ncSender greys out its Plugins tab unless it is Idle. Open
 the same window from **Settings → Plugins → HA Switches → Settings**.
 

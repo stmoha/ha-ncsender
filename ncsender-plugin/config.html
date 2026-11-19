@@ -26,6 +26,11 @@
     #has-root button.has-on { background: #2e7d32 !important; }
     #has-root button.has-off { background: #616161 !important; }
     #has-root button.has-active { box-shadow: 0 0 0 3px #fff9 inset !important; }
+    #has-root button.has-btn { position: relative; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none; }
+    #has-root .has-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #fff4; pointer-events: none; }
+    #has-root .has-fill.go { width: 100%; transition: width 1s linear; }
+    #has-root .has-holdtag { font-family: inherit; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
+      border: 1px solid #f9a825; color: #f9a825; border-radius: 4px; padding: 1px 6px; margin-left: 6px; }
     #has-root button.has-plain { background: var(--color-accent, #1976d2) !important; flex: 0 0 auto !important; min-height: 40px !important; }
     #has-root button.has-link { background: transparent !important; color: inherit !important; text-decoration: underline !important;
       min-height: 0 !important; padding: 4px 0 !important; font-weight: 400 !important; flex: 0 0 auto !important; }
@@ -68,7 +73,10 @@
         Leave it empty to send comment lines through the controller instead.
       </p>
       <label class="has-label" for="has-text">Switches</label>
-      <p class="has-note" style="margin-top:0">One per line: <code>Name, entity_id</code></p>
+      <p class="has-note" style="margin-top:0">
+        One per line: <code>Name, entity_id</code>. Add <code>, hold</code> to make both buttons need a
+        1-second press, e.g. <code>Controller power, switch.slb_ext, hold</code>.
+      </p>
       <textarea id="has-text" spellcheck="false" placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist&#10;Dust collector, switch.dust_collector"></textarea>
       <div class="has-row" style="margin-top:12px; align-items:center">
         <button type="button" class="has-btn has-plain" id="has-save">Save</button>
@@ -223,6 +231,35 @@
     }, 150);
   });
 
+  // ---------- hold to press ----------
+
+  // Like ncSender's own "Hold" outputs: the action fires only after the button
+  // has been held for HOLD_MS. Releasing, leaving or cancelling earlier does nothing.
+  var HOLD_MS = 1000;
+  function holdToPress(btn, fire, statusEl) {
+    var fill = el('span', 'has-fill');
+    btn.appendChild(fill);
+    btn.title = 'Press and hold for 1 second';
+    var timer = null;
+    function cancel(hint) {
+      if (!timer) return;
+      clearTimeout(timer); timer = null;
+      fill.classList.remove('go');
+      if (hint) { statusEl.className = 'has-status has-dirty'; statusEl.textContent = 'Hold for 1 s'; }
+    }
+    btn.addEventListener('pointerdown', function (e) {
+      if (btn.disabled || (e.button !== undefined && e.button !== 0)) return;
+      e.preventDefault();
+      try { btn.setPointerCapture(e.pointerId); } catch (x) {}
+      fill.classList.remove('go'); void fill.offsetWidth; fill.classList.add('go');
+      timer = setTimeout(function () { timer = null; fill.classList.remove('go'); fire(); }, HOLD_MS);
+    });
+    btn.addEventListener('pointerup', function () { cancel(true); });
+    btn.addEventListener('pointercancel', function () { cancel(false); });
+    btn.addEventListener('lostpointercapture', function () { cancel(false); });
+    btn.addEventListener('contextmenu', function (e) { e.preventDefault(); });   // long-press menu on touch
+  }
+
   // ---------- rendering ----------
 
   function render() {
@@ -251,7 +288,9 @@
       if (!direct) state.style.display = 'none';
       head.appendChild(state);
       card.appendChild(head);
-      card.appendChild(el('div', 'has-entity', s.entity));
+      var meta = el('div', 'has-entity', s.entity);
+      if (s.hold) { var tag = el('span', 'has-holdtag', 'Hold'); tag.title = 'Press and hold for 1 second'; meta.appendChild(tag); }
+      card.appendChild(meta);
       var row = el('div', 'has-row');
       var on = el('button', 'has-btn has-on', 'On'); on.type = 'button';
       var off = el('button', 'has-btn has-off', 'Off'); off.type = 'button';
@@ -270,8 +309,13 @@
           if (r.ok && r.state) showState(s.entity, r.state);
         });
       }
-      on.addEventListener('click', function () { press('ON'); });
-      off.addEventListener('click', function () { press('OFF'); });
+      if (s.hold) {
+        holdToPress(on, function () { press('ON'); }, status);
+        holdToPress(off, function () { press('OFF'); }, status);
+      } else {
+        on.addEventListener('click', function () { press('ON'); });
+        off.addEventListener('click', function () { press('OFF'); });
+      }
       grid.appendChild(card);
     });
   }
@@ -283,16 +327,19 @@
     raw.split(/\r?\n/).forEach(function (line, i) {
       line = line.trim();
       if (!line || line.charAt(0) === '#') return;
-      var comma = line.lastIndexOf(',');
-      var name = comma >= 0 ? line.slice(0, comma).trim() : '';
-      var entity = (comma >= 0 ? line.slice(comma + 1) : line).trim().toLowerCase();
+      // Name, entity_id[, hold]
+      var parts = line.split(',').map(function (p) { return p.trim(); });
+      var hold = false;
+      if (parts.length > 1 && /^hold$/i.test(parts[parts.length - 1])) { hold = true; parts.pop(); }
+      var entity = parts.pop().toLowerCase();
+      var name = parts.join(', ');
       if (!ENTITY_RE.test(entity)) { bad.push('line ' + (i + 1)); return; }
-      out.push({ name: name || entity, entity: entity });
+      out.push({ name: name || entity, entity: entity, hold: hold });
     });
     return { switches: out, bad: bad };
   }
   function toLines(list) {
-    return list.map(function (s) { return s.name + ', ' + s.entity; }).join('\n');
+    return list.map(function (s) { return s.name + ', ' + s.entity + (s.hold ? ', hold' : ''); }).join('\n');
   }
   function dirty() { return text.value !== saved.text || urlInput.value.trim() !== saved.url; }
   function setStatus(cls, msg) { saveStatus.className = 'has-status ' + cls; saveStatus.textContent = msg; }
@@ -364,7 +411,7 @@
         apply({
           switches: (raw && Array.isArray(raw.switches) ? raw.switches : []).filter(function (s) {
             return s && ENTITY_RE.test(String(s.entity || ''));
-          }).map(function (s) { return { name: s.name || s.entity, entity: s.entity }; }),
+          }).map(function (s) { return { name: s.name || s.entity, entity: s.entity, hold: s.hold === true }; }),
           webhookUrl: raw && typeof raw.webhookUrl === 'string' && WEBHOOK_RE.test(raw.webhookUrl) ? raw.webhookUrl : ''
         });
         text.value = saved.text;

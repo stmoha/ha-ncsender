@@ -27,6 +27,9 @@
   shortcuts…* button that opens ncSender Settings → Controls, official Home Assistant icon.
 - HA Switches plugin 0.1.3: *Keyboard shortcuts…* also types "HA Switches" into the Controls search,
   so only the plugin's row shows.
+- HA Switches plugin 0.1.4: optional hold-to-press per switch (`Name, entity_id, hold`). Both
+  buttons then need a 1-second press, like ncSender's own *Hold* outputs, for devices such as the
+  controller's power that shouldn't switch on a stray click.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
