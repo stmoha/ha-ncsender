@@ -41,6 +41,9 @@
 - HA Switches plugin 0.1.7: optional `slow` flag (`Name, entity_id, slow`, combinable with `hold`) for
   devices that take a while to change, e.g. a compressor that finishes its cycle before powering off:
   the toggle keeps pulsing for up to 15 minutes instead of giving up after 10 s.
+- HA Switches plugin 0.1.8: `#` notes in the switch list. Start a line with `#` to comment it out
+  (handy for test switches), or put a note after an entry. The list is now saved as typed, so notes
+  and commented-out lines survive Save.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

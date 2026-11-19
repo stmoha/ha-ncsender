@@ -50,6 +50,15 @@ script that waits for the compression cycle to finish. Point the plugin at a Hom
 that script (`script.turn_on`) and whose state follows the real plug, then add
 `Compressor, switch.compressor_safe, slow`. `hold` and `slow` can be combined.
 
+**Notes.** Anything after `#` is ignored, so you can comment out a line or annotate one:
+
+```
+# Shop
+Dust collector, switch.dust_collector       # Shelly in the panel
+Compressor, switch.compressor_safe, slow    # off waits for the cycle to end
+# Test lamp, light.bench
+```
+
 **Opening it with the controller off.** ncSender greys out its Plugins tab unless it is Idle. Open
 the same window from **Settings → Plugins → HA Switches → Settings**.
 

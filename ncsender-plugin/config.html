@@ -91,8 +91,9 @@
         <code>, hold</code> to need a 1-second press (e.g. <code>Controller power, switch.slb_ext, hold</code>);
         <code>, slow</code> for devices that take a while to change, so the toggle waits up to 15 minutes
         for them (e.g. <code>Compressor, switch.compressor_safe, slow</code>). Both can be combined.
+        Anything after <code>#</code> is a note: start a line with <code>#</code> to comment it out.
       </p>
-      <textarea id="has-text" spellcheck="false" placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist&#10;Dust collector, switch.dust_collector"></textarea>
+      <textarea id="has-text" spellcheck="false" placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist   # on the laser too&#10;# Test lamp, light.bench"></textarea>
       <div class="has-row" style="margin-top:12px; align-items:center">
         <button type="button" class="has-btn has-plain" id="has-save">Save</button>
         <span class="has-status" id="has-save-status"></span>
@@ -424,8 +425,11 @@
   function parseLines(raw) {
     var out = [], bad = [];
     raw.split(/\r?\n/).forEach(function (line, i) {
+      // "#" starts a note: a whole line ("# test switches") or the end of one.
+      var hash = line.indexOf('#');
+      if (hash >= 0) line = line.slice(0, hash);
       line = line.trim();
-      if (!line || line.charAt(0) === '#') return;
+      if (!line) return;
       // Name, entity_id[, hold][, slow]   (flags in any order)
       var parts = line.split(',').map(function (p) { return p.trim(); });
       var hold = false, slow = false;
@@ -500,7 +504,8 @@
 
   function apply(c) {
     cfg = c;
-    saved.text = toLines(c.switches);
+    // Keep the text as typed (notes and commented-out lines); older settings have none.
+    saved.text = typeof c.text === 'string' ? c.text : toLines(c.switches);
     saved.url = c.webhookUrl;
     render();
     startPolling();
@@ -513,7 +518,8 @@
           switches: (raw && Array.isArray(raw.switches) ? raw.switches : []).filter(function (s) {
             return s && ENTITY_RE.test(String(s.entity || ''));
           }).map(function (s) { return { name: s.name || s.entity, entity: s.entity, hold: s.hold === true, slow: s.slow === true }; }),
-          webhookUrl: raw && typeof raw.webhookUrl === 'string' && WEBHOOK_RE.test(raw.webhookUrl) ? raw.webhookUrl : ''
+          webhookUrl: raw && typeof raw.webhookUrl === 'string' && WEBHOOK_RE.test(raw.webhookUrl) ? raw.webhookUrl : '',
+          text: raw && typeof raw.text === 'string' ? raw.text : null
         });
         text.value = saved.text;
         urlInput.value = saved.url;
@@ -539,7 +545,7 @@
     if (parsed.bad.length) return setStatus('has-err', 'Not an entity ID on ' + parsed.bad.join(', ') + ' (expected e.g. switch.chiller)');
     if (url && !WEBHOOK_RE.test(url)) return setStatus('has-err', 'The webhook URL should look like http://homeassistant.local:8123/api/webhook/…');
     setStatus('', 'Saving…');
-    var c = { switches: parsed.switches, webhookUrl: url };
+    var c = { switches: parsed.switches, webhookUrl: url, text: text.value.replace(/\r\n?/g, '\n').replace(/\s+$/, '') };
     fetch(SETTINGS_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
