@@ -14,6 +14,9 @@
   unclaimed outputs work. Use *Devices ncSender may switch* for HA devices instead.
 - Fixed "Translation error: UNCLOSED_TAG" under *Devices ncSender may switch* (the help text
   contained `<entity_id>`, which HA's translation parser reads as a tag).
+- HA Switches plugin 0.1.1: pressing inside the dialog and releasing outside it no longer closes
+  it; with unsaved edits a backdrop click doesn't close it either (× still does); unsaved edits are
+  kept and restored when the dialog reopens; more padding; no overflow in narrow windows.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

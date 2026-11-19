@@ -1,12 +1,13 @@
 <div id="has-root">
   <style>
-    #has-root { font-family: inherit; color: var(--color-text-primary, inherit); max-width: 900px; margin: 0 auto; }
-    #has-root .has-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
-    #has-root .has-card { border: 1px solid var(--color-border, #8884); border-radius: 10px; padding: 14px;
-      background: var(--color-surface, transparent); display: flex; flex-direction: column; gap: 10px; }
+    #has-root { font-family: inherit; color: var(--color-text-primary, inherit); max-width: 900px; margin: 0 auto;
+      padding: 24px 28px 28px; box-sizing: border-box; }
+    #has-root .has-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 16px; }
+    #has-root .has-card { border: 1px solid var(--color-border, #8884); border-radius: 10px; padding: 18px 20px;
+      background: var(--color-surface, transparent); display: flex; flex-direction: column; gap: 12px; }
     #has-root .has-name { font-size: 1.15rem; font-weight: 600; }
     #has-root .has-entity { font-size: 0.8rem; opacity: 0.65; font-family: ui-monospace, monospace; word-break: break-all; }
-    #has-root .has-row { display: flex; gap: 8px; }
+    #has-root .has-row { display: flex; gap: 10px; }
     #has-root button.has-btn { flex: 1 !important; min-height: 52px !important; font-size: 1rem !important;
       font-weight: 600 !important; border-radius: 8px !important; padding: 8px 12px !important; cursor: pointer !important;
       color: #fff !important; border: none !important; }
@@ -19,11 +20,13 @@
     #has-root .has-status { font-size: 0.85rem; min-height: 1.2em; }
     #has-root .has-ok { color: #43a047; }
     #has-root .has-err { color: #e53935; }
-    #has-root .has-note { font-size: 0.85rem; opacity: 0.75; margin: 14px 0 0; line-height: 1.4; }
-    #has-root textarea { width: 100%; min-height: 140px; font-family: ui-monospace, monospace; font-size: 0.95rem;
-      padding: 8px; box-sizing: border-box; border-radius: 6px; }
+    #has-root .has-note { font-size: 0.85rem; opacity: 0.75; margin: 20px 0 0; line-height: 1.5; }
+    #has-root textarea { width: 100%; min-height: 160px; font-family: ui-monospace, monospace; font-size: 0.95rem;
+      padding: 12px 14px; margin-top: 4px; box-sizing: border-box; border-radius: 6px; }
+    #has-root code { overflow-wrap: anywhere; }
     #has-root .has-empty { padding: 18px; border: 1px dashed var(--color-border, #8886); border-radius: 10px; text-align: center; }
-    #has-root .has-edit { margin-top: 18px; }
+    #has-root .has-edit { margin-top: 24px; }
+    #has-root .has-dirty { color: #f9a825; }
   </style>
 
   <div id="has-switches" class="has-grid"></div>
@@ -39,7 +42,7 @@
     <div id="has-editor" style="display:none">
       <p class="has-note" style="margin-top:6px">One switch per line: <code>Name, entity_id</code></p>
       <textarea id="has-text" spellcheck="false" placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist&#10;Dust collector, switch.dust_collector"></textarea>
-      <div class="has-row" style="margin-top:8px; align-items:center">
+      <div class="has-row" style="margin-top:12px; align-items:center">
         <button type="button" class="has-btn has-plain" id="has-save">Save</button>
         <span class="has-status" id="has-save-status"></span>
       </div>
@@ -70,6 +73,50 @@
   var editor = document.getElementById('has-editor');
   var saveStatus = document.getElementById('has-save-status');
   var switches = [];
+  var root = document.getElementById('has-root');
+  var DRAFT_KEY = PLUGIN_ID + ':draft';
+  var savedText = '';
+
+  function store(fn) { try { return fn(window.localStorage); } catch (e) { return null; } }
+  function dirty() { return text.value !== savedText; }
+  function showDirty() {
+    if (dirty()) { saveStatus.className = 'has-status has-dirty'; saveStatus.textContent = 'Unsaved changes'; }
+  }
+
+  // ncSender closes a dialog on a click on its backdrop. Pressing inside this
+  // dialog (e.g. selecting text in the box) and releasing outside it counts as
+  // such a click, so edits were lost. Block that, and while there are unsaved
+  // edits block real backdrop clicks too (the X still closes).
+  var downInside = false;
+  function onDown(e) {
+    if (!document.contains(root)) return detach();
+    // Inside = anywhere but the backdrop, i.e. not on an element wrapping the dialog.
+    var t = e.target;
+    downInside = t instanceof Node && !(t !== root && t.contains(root) && !root.contains(t));
+  }
+  function onClick(e) {
+    if (!document.contains(root)) return detach();
+    var t = e.target;
+    var outside = t instanceof Element && !root.contains(t) && t.contains(root);
+    if (!outside) { downInside = false; return; }
+    if (downInside || dirty()) {
+      e.stopPropagation(); e.preventDefault();
+      if (!downInside) {
+        editor.style.display = '';
+        saveStatus.className = 'has-status has-dirty';
+        saveStatus.textContent = 'Unsaved changes: Save first, or close with × to discard';
+      }
+    }
+    downInside = false;
+  }
+  function detach() {
+    window.removeEventListener('pointerdown', onDown, true);
+    window.removeEventListener('mousedown', onDown, true);
+    window.removeEventListener('click', onClick, true);
+  }
+  window.addEventListener('pointerdown', onDown, true);
+  window.addEventListener('mousedown', onDown, true);
+  window.addEventListener('click', onClick, true);
 
   function el(tag, cls, txt) {
     var e = document.createElement(tag);
@@ -152,11 +199,24 @@
         switches = (cfg && Array.isArray(cfg.switches) ? cfg.switches : []).filter(function (s) {
           return s && ENTITY_RE.test(String(s.entity || ''));
         });
-        text.value = toLines(switches);
+        savedText = toLines(switches);
+        text.value = savedText;
+        var draft = store(function (ls) { return ls.getItem(DRAFT_KEY); });
+        if (draft != null && draft !== savedText) {
+          text.value = draft;
+          editor.style.display = '';
+          saveStatus.className = 'has-status has-dirty';
+          saveStatus.textContent = 'Restored unsaved edits';
+        }
         if (!switches.length) editor.style.display = '';
         render();
       });
   }
+
+  text.addEventListener('input', function () {
+    store(function (ls) { if (dirty()) ls.setItem(DRAFT_KEY, text.value); else ls.removeItem(DRAFT_KEY); });
+    if (dirty()) showDirty(); else { saveStatus.className = 'has-status'; saveStatus.textContent = ''; }
+  });
 
   document.getElementById('has-toggle-edit').addEventListener('click', function () {
     editor.style.display = editor.style.display === 'none' ? '' : 'none';
@@ -178,7 +238,9 @@
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       switches = parsed.switches;
-      text.value = toLines(switches);
+      savedText = toLines(switches);
+      text.value = savedText;
+      store(function (ls) { ls.removeItem(DRAFT_KEY); });
       render();
       saveStatus.className = 'has-status has-ok';
       saveStatus.textContent = 'Saved ✓';
