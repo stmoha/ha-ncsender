@@ -43,6 +43,13 @@ file you downloaded can't switch your other devices.
 both its buttons need a 1-second press, with a fill bar showing progress, like ncSender's own
 *Hold* outputs. Use it for anything that shouldn't switch on a stray click.
 
+**Slow devices.** Add `, slow` for a device that takes a while to change, so the toggle keeps
+pulsing for up to 15 minutes instead of giving up after 10 s. Example: a compressor whose Off runs a
+script that waits for the compression cycle to finish. Point the plugin at a Home Assistant
+[template switch](https://www.home-assistant.io/integrations/template/) whose `turn_off` starts
+that script (`script.turn_on`) and whose state follows the real plug, then add
+`Compressor, switch.compressor_safe, slow`. `hold` and `slow` can be combined.
+
 **Opening it with the controller off.** ncSender greys out its Plugins tab unless it is Idle. Open
 the same window from **Settings → Plugins → HA Switches → Settings**.
 

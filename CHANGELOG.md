@@ -38,6 +38,9 @@
 - HA Switches plugin 0.1.6: after a tap the toggle moves at once and pulses "Switching on…" until
   Home Assistant reports the new state (checked every 0.5 s), instead of flicking back while a device
   such as a Shelly catches up. If nothing changes within 10 s it goes back and says so.
+- HA Switches plugin 0.1.7: optional `slow` flag (`Name, entity_id, slow`, combinable with `hold`) for
+  devices that take a while to change, e.g. a compressor that finishes its cycle before powering off:
+  the toggle keeps pulsing for up to 15 minutes instead of giving up after 10 s.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

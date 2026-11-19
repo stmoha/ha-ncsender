@@ -87,8 +87,10 @@
       </p>
       <label class="has-label" for="has-text">Switches</label>
       <p class="has-note" style="margin-top:0">
-        One per line: <code>Name, entity_id</code>. Add <code>, hold</code> to make both buttons need a
-        1-second press, e.g. <code>Controller power, switch.slb_ext, hold</code>.
+        One per line: <code>Name, entity_id</code>, optionally followed by:
+        <code>, hold</code> to need a 1-second press (e.g. <code>Controller power, switch.slb_ext, hold</code>);
+        <code>, slow</code> for devices that take a while to change, so the toggle waits up to 15 minutes
+        for them (e.g. <code>Compressor, switch.compressor_safe, slow</code>). Both can be combined.
       </p>
       <textarea id="has-text" spellcheck="false" placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist&#10;Dust collector, switch.dust_collector"></textarea>
       <div class="has-row" style="margin-top:12px; align-items:center">
@@ -205,30 +207,35 @@
   }
   // A switch is in flight from the moment it's pressed until Home Assistant reports
   // the new state (devices such as Shellies report a moment after the command).
-  var CONFIRM_MS = 10000, FAST_POLL_MS = 500;
+  // "slow" switches (e.g. a compressor that finishes its cycle before powering off)
+  // get a much longer wait; after the first 10 s the normal 3 s refresh keeps checking.
+  var CONFIRM_MS = 10000, SLOW_CONFIRM_MS = 15 * 60000, FAST_POLL_MS = 500, FAST_POLL_FOR_MS = 10000;
   function settle(c) {
     c.pending = false; c.target = null;
     clearTimeout(c.fastTimer); clearTimeout(c.giveUp);
     c.toggle.classList.remove('is-pending');
   }
   function startPending(c, target) {
-    c.pending = true; c.target = target;
+    var wait = c.slow ? SLOW_CONFIRM_MS : CONFIRM_MS;
+    c.pending = true; c.target = target; c.pendingSince = Date.now();
     c.toggle.disabled = true;
     c.toggle.classList.add('is-pending');
     c.toggle.classList.toggle('is-on', target === 'on');   // move the knob right away
     c.toggle.classList.remove('is-bad');
-    c.label.textContent = target === 'on' ? 'Switching on\u2026' : 'Switching off\u2026';
+    c.label.textContent = (target === 'on' ? 'Switching on\u2026' : 'Switching off\u2026') +
+      (c.slow ? ' waiting for the device' : '');
     c.giveUp = setTimeout(function () {
       if (!c.pending) return;
       var was = c.current;
       settle(c);
       c.status.className = 'has-status has-err';
-      c.status.textContent = 'Home Assistant still reports ' + (was || 'no state') + ' after 10 s';
+      c.status.textContent = 'Home Assistant still reports ' + (was || 'no state') + ' after ' +
+        (wait >= 60000 ? Math.round(wait / 60000) + ' min' : Math.round(wait / 1000) + ' s');
       showState(c.entity, was);
-    }, CONFIRM_MS);
+    }, wait);
   }
   function fastPoll(c) {
-    if (!c.pending || !alive()) return;
+    if (!c.pending || !alive() || Date.now() - c.pendingSince > FAST_POLL_FOR_MS) return;
     poll();
     c.fastTimer = setTimeout(function () { fastPoll(c); }, FAST_POLL_MS);
   }
@@ -349,6 +356,7 @@
       card.appendChild(head);
       var meta = el('div', 'has-entity', s.entity);
       if (s.hold) { var tag = el('span', 'has-holdtag', 'Hold'); tag.title = 'Press and hold for 1 second'; meta.appendChild(tag); }
+      if (s.slow) { var stag = el('span', 'has-holdtag', 'Slow'); stag.title = 'Waits up to 15 minutes for the device to change'; meta.appendChild(stag); }
       card.appendChild(meta);
       var status = el('div', 'has-status');
       if (direct) {
@@ -361,7 +369,7 @@
         card.appendChild(toggle);
         card.appendChild(status);
         var c = cards[s.entity] = { entity: s.entity, state: state, toggle: toggle, label: label, status: status,
-                                    hold: s.hold, current: null, pending: false, target: null };
+                                    hold: s.hold, slow: s.slow, current: null, pending: false, target: null };
         var flip = function () {
           if (c.pending || (c.current !== 'on' && c.current !== 'off')) return;
           var action = c.current === 'on' ? 'OFF' : 'ON';
@@ -418,19 +426,21 @@
     raw.split(/\r?\n/).forEach(function (line, i) {
       line = line.trim();
       if (!line || line.charAt(0) === '#') return;
-      // Name, entity_id[, hold]
+      // Name, entity_id[, hold][, slow]   (flags in any order)
       var parts = line.split(',').map(function (p) { return p.trim(); });
-      var hold = false;
-      if (parts.length > 1 && /^hold$/i.test(parts[parts.length - 1])) { hold = true; parts.pop(); }
+      var hold = false, slow = false;
+      while (parts.length > 1 && /^(hold|slow)$/i.test(parts[parts.length - 1])) {
+        if (/^hold$/i.test(parts.pop())) hold = true; else slow = true;
+      }
       var entity = parts.pop().toLowerCase();
       var name = parts.join(', ');
       if (!ENTITY_RE.test(entity)) { bad.push('line ' + (i + 1)); return; }
-      out.push({ name: name || entity, entity: entity, hold: hold });
+      out.push({ name: name || entity, entity: entity, hold: hold, slow: slow });
     });
     return { switches: out, bad: bad };
   }
   function toLines(list) {
-    return list.map(function (s) { return s.name + ', ' + s.entity + (s.hold ? ', hold' : ''); }).join('\n');
+    return list.map(function (s) { return s.name + ', ' + s.entity + (s.hold ? ', hold' : '') + (s.slow ? ', slow' : ''); }).join('\n');
   }
   function dirty() { return text.value !== saved.text || urlInput.value.trim() !== saved.url; }
   function setStatus(cls, msg) { saveStatus.className = 'has-status ' + cls; saveStatus.textContent = msg; }
@@ -502,7 +512,7 @@
         apply({
           switches: (raw && Array.isArray(raw.switches) ? raw.switches : []).filter(function (s) {
             return s && ENTITY_RE.test(String(s.entity || ''));
-          }).map(function (s) { return { name: s.name || s.entity, entity: s.entity, hold: s.hold === true }; }),
+          }).map(function (s) { return { name: s.name || s.entity, entity: s.entity, hold: s.hold === true, slow: s.slow === true }; }),
           webhookUrl: raw && typeof raw.webhookUrl === 'string' && WEBHOOK_RE.test(raw.webhookUrl) ? raw.webhookUrl : ''
         });
         text.value = saved.text;
