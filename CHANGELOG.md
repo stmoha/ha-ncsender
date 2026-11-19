@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0 — unreleased
+## 0.5.0 — unreleased (beta: v0.5.0b1, pre-release from `feature/ha-switches`)
 - **Switch HA devices from ncSender.** The integration now acts on comment lines of the form
   `(HA <entity_id> ON|OFF|TOGGLE)` once the controller acknowledges them, calling
   `homeassistant.turn_on` / `turn_off` / `toggle`. Only entities picked in the new option
