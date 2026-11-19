@@ -35,7 +35,7 @@
         "data_description": {
           "laser_max_s": "Highest S value your laser accepts. Spindle commands above this are treated as the VFD spindle.",
           "telemetry_interval": "How often positions, RPM, feed rate and progress are updated in Home Assistant. Lower is more responsive; higher keeps the recorder database smaller during long jobs. State changes (job status, spindle on/off, alarms) are always immediate.",
-          "output_pins": "Comma-separated grblHAL aux output numbers (the N in M64 PN), e.g. \"0, 2\". Each becomes a switch that mirrors ncSender Auxiliary I/O state. Pins need no physical wiring: an unused number acts as a virtual switch you can mirror onto a Home Assistant device.",
+          "output_pins": "Comma-separated grblHAL aux output numbers (the N in M64 PN), e.g. \"0, 2\". Each becomes a switch that mirrors ncSender Auxiliary I/O state. Only the board's real, unclaimed aux outputs work (grblHAL refuses other numbers with error:39). To switch Home Assistant devices without using a pin, use \"Devices ncSender may switch\" below.",
           "ha_switches": "Entities that \"(HA <entity_id> ON|OFF|TOGGLE)\" commands from ncSender may control: sent by the HA Switches ncSender plugin, or written as a comment line in a G-code file. Commands for anything not listed here are ignored, so a downloaded job can't switch your other devices. Every command also fires an ncsender_ha_command event."
         }
       }

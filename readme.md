@@ -107,11 +107,13 @@ Limits: buttons don't work while a job is paused, and they don't show the device
 
 ### Aux output pins
 
-grblHAL aux outputs don't have to be wired to anything — ncSender tracks `M64 Pn`/`M65 Pn` itself,
-so an unused pin number is a free virtual switch:
+Each pin listed in options becomes `switch.ncsender_output_pN`, in step with ncSender's own
+Auxiliary I/O switch for that output. Only the board's **real, unclaimed** aux outputs work: grblHAL
+refuses higher numbers with `error:39` (on the SLB-EXT that leaves a few single-digit pins), so there
+are no free "virtual" pins. To switch HA devices without using a pin, use the HA Switches plugin above.
 
 1. **ncSender** → Settings → Advanced → Auxiliary I/O → *Add Output*: name it (e.g. "Shop Lights"),
-   pick an unused output such as `M64 P2`. You now have a button on the main screen.
+   pick a free output on your board such as `M64 P2`. You now have a button on the main screen.
 2. **Home Assistant** → ncSender → Configure → *Aux output pins exposed as switches*: `2`. After the
    reload, `switch.ncsender_output_p2` appears and follows that button.
 3. Mirror it onto the real device with one automation:

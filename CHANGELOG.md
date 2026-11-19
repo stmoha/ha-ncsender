@@ -9,6 +9,9 @@
   **HA Switches** ncSender plugin (prototype in `ncsender-plugin/`) and from comments inside a job.
 - Every such command fires an `ncsender_ha_command` event (`entity_id`, `service`, `allowed`)
   for debugging and automations.
+- **Corrected:** the *Aux output pins* help text and readme no longer claim unused pin numbers work
+  as virtual switches. grblHAL refuses outputs the board doesn't have (`error:39`), so only real,
+  unclaimed outputs work. Use *Devices ncSender may switch* for HA devices instead.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

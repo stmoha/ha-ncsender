@@ -392,8 +392,8 @@ class NcSenderClient:
             },
             # Telemetry is quantized: RPM/feed to 10s, positions to 0.01 mm,
             # so sensor jitter doesn't generate recorder rows.
-            # ncSender tracks M64/M65 itself and reports the ON pins here; a pin
-            # need not be wired to anything, so these double as virtual switches.
+            # ncSender tracks M64/M65 itself and reports the ON pins here. Only the
+            # board's real unclaimed outputs get here: grblHAL refuses others (error:39).
             "output_pins": sorted(int(p) for p in (ms.get("outputPinsState") or []) if str(p).isdigit()),
             "tool_change": (self.last_tool_change or {}).get("at"),
             "tool_change_attributes": self.last_tool_change or {},
