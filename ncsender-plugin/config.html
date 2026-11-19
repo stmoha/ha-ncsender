@@ -210,9 +210,16 @@
           var label = (t.querySelector('.tab-label') || t).textContent || '';
           return /(Controls|Keyboard)/i.test(label);
         })[0];
-        if (tab) return tab.click();
+        if (tab) { tab.click(); return filter(0); }
         if (++tries < 20) setTimeout(pick, 100); else fallback();
       })();
+      // Type the plugin's name into the Controls search box so its row is the only one shown.
+      function filter(n) {
+        var box = document.querySelector('.search-input');
+        if (!box) { if (n < 20) setTimeout(function () { filter(n + 1); }, 100); return; }
+        box.value = 'HA Switches';
+        box.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }, 150);
   });
 

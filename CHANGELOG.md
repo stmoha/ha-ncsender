@@ -25,6 +25,8 @@
 - HA Switches plugin 0.1.2: *Home Assistant webhook URL* setting (with a link to the integration
   page where it's shown), live on/off state per device, *Open Home Assistant* link, *Keyboard
   shortcuts…* button that opens ncSender Settings → Controls, official Home Assistant icon.
+- HA Switches plugin 0.1.3: *Keyboard shortcuts…* also types "HA Switches" into the Controls search,
+  so only the plugin's row shows.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
