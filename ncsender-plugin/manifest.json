@@ -1,7 +1,7 @@
 {
   "id": "com.cncdocs.ha-switches",
   "name": "HA Switches",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "0.3.111",
   "platforms": {
     "v1": "0.3.111",
@@ -9,7 +9,7 @@
     "pro-v2": "2.0.0"
   },
   "author": "Stefan",
-  "description": "Switch Home Assistant devices (chiller, air, dust collector, lights) from ncSender. Each button sends a comment line like (HA switch.shop_lights ON), which the controller ignores and the ncSender Home Assistant integration turns into a switch command. Needs the ha-ncsender integration with the device allowed in its Configure screen.",
+  "description": "Switch Home Assistant devices (chiller, air, dust collector, lights) from ncSender, with their live on/off state. With the integration's webhook URL the buttons talk to Home Assistant directly, so they work with the controller off or a job paused; without it they send a comment line like (HA switch.shop_lights ON) through the controller. Needs the ha-ncsender integration (v0.5.0b2+) with the device allowed in its Configure screen.",
   "repository": "https://github.com/stmoha/ha-ncsender",
   "category": "utility",
   "priority": 50,
@@ -23,5 +23,6 @@
       "label": "HA Switches",
       "clientOnly": true
     }
-  ]
+  ],
+  "icon": "icon.png"
 }

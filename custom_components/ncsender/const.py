@@ -31,6 +31,9 @@ DEFAULT_OUTPUT_PINS = ""
 CONF_HA_SWITCHES = "ha_switches"
 HA_SWITCH_DOMAINS = ["switch", "light", "fan", "input_boolean", "script"]
 EVENT_HA_COMMAND = "ncsender_ha_command"
+# Local-only webhook the HA Switches plugin posts to directly (works with the
+# controller off). Created once per entry and kept in entry.data.
+CONF_WEBHOOK_ID = "webhook_id"
 
 SERVICE_SEND_COMMAND = "send_command"
 ATTR_COMMAND = "command"

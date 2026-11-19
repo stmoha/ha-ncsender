@@ -7,7 +7,7 @@ import zipfile
 from pathlib import Path
 
 HERE = Path(__file__).parent
-FILES = ["manifest.json", "index.js", "config.html", "README.md"]
+FILES = ["manifest.json", "index.js", "config.html", "README.md", "icon.png"]
 
 manifest = json.loads((HERE / "manifest.json").read_text(encoding="utf-8"))
 label = sys.argv[1] if len(sys.argv) > 1 else f"v{manifest['version']}"

@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0 — unreleased (beta: v0.5.0b1, pre-release from `feature/ha-switches`)
+## 0.5.0 — unreleased (betas: v0.5.0b1, v0.5.0b2; pre-releases from `feature/ha-switches`)
 - **Switch HA devices from ncSender.** The integration now acts on comment lines of the form
   `(HA <entity_id> ON|OFF|TOGGLE)` once the controller acknowledges them, calling
   `homeassistant.turn_on` / `turn_off` / `toggle`. Only entities picked in the new option
@@ -17,6 +17,14 @@
 - HA Switches plugin 0.1.1: pressing inside the dialog and releasing outside it no longer closes
   it; with unsaved edits a backdrop click doesn't close it either (× still does); unsaved edits are
   kept and restored when the dialog reopens; more padding; no overflow in narrow windows.
+- **Direct switching webhook (b2).** The integration registers a local-only webhook; its URL is
+  shown at the top of Configure. The HA Switches plugin posts to it directly, so its buttons work
+  with the controller off, before homing, in an alarm and while a job is paused. Same allowlist; no
+  HA token leaves Home Assistant. `{"action": "states"}` returns the allowed devices' states. The
+  `ncsender_ha_command` event gains `source` (`command` or `webhook`).
+- HA Switches plugin 0.1.2: *Home Assistant webhook URL* setting (with a link to the integration
+  page where it's shown), live on/off state per device, *Open Home Assistant* link, *Keyboard
+  shortcuts…* button that opens ncSender Settings → Controls, official Home Assistant icon.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import

@@ -99,11 +99,17 @@ Settings → Devices & services → ncSender → **Configure**:
 ### HA Switches plugin (v0.5.0+, prototype)
 
 Install the **HA Switches** ncSender plugin from [`ncsender-plugin/`](ncsender-plugin/README.md),
-add your devices (`Chiller, switch.chiller` — one per line), and allow the same entities in
-Configure → *Devices ncSender may switch*. Each On/Off button sends a comment line such as
-`(HA switch.chiller ON)`; the controller ignores it and the integration switches the device.
-No automation, no aux pin, and no limit on how many. The same comment works inside a G-code file.
-Limits: buttons don't work while a job is paused, and they don't show the device's state yet.
+add your devices (`Chiller, switch.chiller`, one per line), and allow the same entities in
+Configure → *Devices ncSender may switch*. No automation, no aux pin, and no limit on how many.
+
+- **Direct (recommended):** copy the webhook URL shown at the top of Configure into the plugin's
+  *Home Assistant webhook URL*. Buttons then talk to HA directly and show each device's live state;
+  they work with the controller off, before homing, and while a job is paused. The webhook only
+  accepts requests from your local network and only switches the allowed devices.
+- **Through the controller:** without a webhook URL each button sends a comment line such as
+  `(HA switch.chiller ON)`; the controller ignores it and the integration switches the device once
+  it's acknowledged. Needs the controller connected and no job paused. The same comment works
+  inside a G-code file.
 
 ### Aux output pins
 

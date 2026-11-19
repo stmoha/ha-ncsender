@@ -110,7 +110,7 @@ async def test_full_flow(hass, fake_ncsender):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
 
-async def test_ha_switch_commands(hass, fake_ncsender):
+async def test_ha_switch_commands(hass, fake_ncsender, hass_client_no_auth):
     """(HA <entity> ON|OFF|TOGGLE) comment commands call services for allowlisted entities only."""
     from homeassistant.setup import async_setup_component
     assert await async_setup_component(hass, "input_boolean", {"input_boolean": {"chiller": {}, "door_lock": {}}})
@@ -139,8 +139,22 @@ async def test_ha_switch_commands(hass, fake_ncsender):
     assert hass.states.get("input_boolean.chiller").state == "off"
     await send({"command": "(HA INPUT_BOOLEAN.DOOR_LOCK ON)", "status": "success"})  # not allowlisted
     assert hass.states.get("input_boolean.door_lock").state == "off"
-    assert events[-1] == {"entity_id": "input_boolean.door_lock", "service": "turn_on", "allowed": False}
+    assert events[-1] == {"entity_id": "input_boolean.door_lock", "service": "turn_on", "allowed": False, "source": "command"}
     assert len(events) == 3
+    # the plugin's direct webhook: same allowlist, works without the controller
+    webhook_id = entry.data["webhook_id"]
+    client = await hass_client_no_auth()
+    url = f"/api/webhook/{webhook_id}"
+    resp = await client.post(url, data=json.dumps({"entity_id": "input_boolean.chiller", "action": "on"}),
+                             headers={"Content-Type": "text/plain"})
+    assert resp.status == 200 and resp.headers["Access-Control-Allow-Origin"] == "*"
+    assert (await resp.json())["ok"] is True
+    assert hass.states.get("input_boolean.chiller").state == "on"
+    resp = await client.post(url, data=json.dumps({"entity_id": "input_boolean.door_lock", "action": "on"}))
+    assert resp.status == 403 and hass.states.get("input_boolean.door_lock").state == "off"
+    resp = await client.post(url, data=json.dumps({"action": "states"}))
+    assert (await resp.json())["states"]["input_boolean.chiller"]["state"] == "on"
+    assert events[-1]["source"] == "webhook"
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
 

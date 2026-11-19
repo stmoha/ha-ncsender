@@ -26,6 +26,7 @@
     "step": {
       "init": {
         "title": "ncSender options",
+        "description": "Settings for the ncSender connection.\n\n**HA Switches plugin webhook** (paste into the plugin's *Home Assistant webhook URL* so its buttons work with the controller off or a job paused):\n\n`{webhook_url}`\n\nIt only accepts requests from your local network and only switches the devices listed below. Treat it like a password.",
         "data": {
           "laser_max_s": "Laser S-value maximum",
           "telemetry_interval": "Telemetry update interval (seconds)",

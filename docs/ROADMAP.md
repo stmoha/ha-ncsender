@@ -130,7 +130,14 @@ here: the HA harness imports `fcntl`/`resource`, so it only runs on Linux/macOS 
     plugin's own window reaches with `POST /api/plugins/<id>/request`.
   - Permissions are granted from the manifest at load; no consent prompt was found in the client.
 
-  **What it unlocks — proposed "HA bridge" mode (not built):**
+  **Built in v0.5.0b2 (simpler variant, no server-side plugin code):** the integration's webhook
+  (part 1 below) exists, and the plugin's *page* posts to it directly from the browser (`text/plain`,
+  so no CORS preflight; the reply carries `Access-Control-Allow-Origin: *`). Buttons work with the
+  controller off or paused and show live states. Still open from the list below: catching `(HA …)`
+  lines from G-code files and the main-screen switches, which needs the server-side `onBeforeCommand`
+  hook (part 2).
+
+  **What it unlocks — proposed "HA bridge" mode:**
   1. *Integration:* register an HA **webhook** (`webhook` dependency, `local_only`), show its URL in
      Configure. Body `{"entity_id","action"}` → same allowlist + `homeassistant.*` call as today;
      `{"action":"states"}` → states of the allowlisted entities. No HA token ever leaves HA; the

@@ -2,10 +2,22 @@
   <style>
     #has-root { font-family: inherit; color: var(--color-text-primary, inherit); max-width: 900px; margin: 0 auto;
       padding: 24px 28px 28px; box-sizing: border-box; }
+    #has-root .has-top { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    #has-root .has-route { font-size: 0.85rem; opacity: 0.75; }
+    #has-root .has-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    #has-root a.has-pill, #has-root button.has-pill { display: inline-flex !important; align-items: center; gap: 6px;
+      color: var(--color-accent, #18bcf2) !important; background: transparent !important; font: inherit !important;
+      font-weight: 600 !important; font-size: 0.9rem !important; text-decoration: none; padding: 6px 12px !important;
+      border: 1px solid currentColor !important; border-radius: 8px !important; cursor: pointer !important; min-height: 0 !important; }
+    #has-root .has-pill:hover { text-decoration: underline; }
     #has-root .has-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(240px, 100%), 1fr)); gap: 16px; }
     #has-root .has-card { border: 1px solid var(--color-border, #8884); border-radius: 10px; padding: 18px 20px;
       background: var(--color-surface, transparent); display: flex; flex-direction: column; gap: 12px; }
+    #has-root .has-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
     #has-root .has-name { font-size: 1.15rem; font-weight: 600; }
+    #has-root .has-state { font-size: 0.8rem; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #6664; white-space: nowrap; }
+    #has-root .has-state.is-on { background: #2e7d32; color: #fff; }
+    #has-root .has-state.is-bad { background: #b71c1c; color: #fff; }
     #has-root .has-entity { font-size: 0.8rem; opacity: 0.65; font-family: ui-monospace, monospace; word-break: break-all; }
     #has-root .has-row { display: flex; gap: 10px; }
     #has-root button.has-btn { flex: 1 !important; min-height: 52px !important; font-size: 1rem !important;
@@ -13,6 +25,7 @@
       color: #fff !important; border: none !important; }
     #has-root button.has-on { background: #2e7d32 !important; }
     #has-root button.has-off { background: #616161 !important; }
+    #has-root button.has-active { box-shadow: 0 0 0 3px #fff9 inset !important; }
     #has-root button.has-plain { background: var(--color-accent, #1976d2) !important; flex: 0 0 auto !important; min-height: 40px !important; }
     #has-root button.has-link { background: transparent !important; color: inherit !important; text-decoration: underline !important;
       min-height: 0 !important; padding: 4px 0 !important; font-weight: 400 !important; flex: 0 0 auto !important; }
@@ -20,27 +33,42 @@
     #has-root .has-status { font-size: 0.85rem; min-height: 1.2em; }
     #has-root .has-ok { color: #43a047; }
     #has-root .has-err { color: #e53935; }
+    #has-root .has-dirty { color: #f9a825; }
     #has-root .has-note { font-size: 0.85rem; opacity: 0.75; margin: 20px 0 0; line-height: 1.5; }
-    #has-root textarea { width: 100%; min-height: 160px; font-family: ui-monospace, monospace; font-size: 0.95rem;
-      padding: 12px 14px; margin-top: 4px; box-sizing: border-box; border-radius: 6px; }
     #has-root code { overflow-wrap: anywhere; }
+    #has-root label.has-label { display: block; font-weight: 600; margin: 16px 0 6px; }
+    #has-root textarea, #has-root input.has-input { width: 100%; font-family: ui-monospace, monospace; font-size: 0.95rem;
+      padding: 12px 14px; box-sizing: border-box; border-radius: 6px; }
+    #has-root textarea { min-height: 160px; }
     #has-root .has-empty { padding: 18px; border: 1px dashed var(--color-border, #8886); border-radius: 10px; text-align: center; }
     #has-root .has-edit { margin-top: 24px; }
-    #has-root .has-dirty { color: #f9a825; }
   </style>
 
+  <div class="has-top">
+    <span class="has-route" id="has-route"></span>
+    <span class="has-links">
+      <button type="button" class="has-pill" id="has-shortcuts" title="Opens ncSender Settings → Controls">Keyboard shortcuts…</button>
+      <a class="has-pill" id="has-ha" target="_blank" rel="noopener noreferrer" style="display:none">Open Home Assistant ↗</a>
+    </span>
+  </div>
   <div id="has-switches" class="has-grid"></div>
-  <p class="has-note">
-    Each button sends a comment line such as <code>(HA switch.shop_lights ON)</code>. The controller ignores it;
-    the ncSender integration in Home Assistant switches the device, but only if the device is listed under
-    <b>Settings → Devices &amp; services → ncSender → Configure → Devices ncSender may switch</b>.
-    Buttons don't work while a job is paused (ncSender holds all commands then) or with the controller disconnected.
-  </p>
+  <p class="has-note" id="has-note"></p>
 
   <div class="has-edit">
     <button type="button" class="has-btn has-link" id="has-toggle-edit">Edit switches</button>
     <div id="has-editor" style="display:none">
-      <p class="has-note" style="margin-top:6px">One switch per line: <code>Name, entity_id</code></p>
+      <label class="has-label" for="has-url">Home Assistant webhook URL</label>
+      <input class="has-input" id="has-url" type="url" spellcheck="false"
+             placeholder="http://homeassistant.local:8123/api/webhook/…">
+      <p class="has-note" style="margin-top:6px">
+        <a class="has-pill" id="has-find-url" target="_blank" rel="noopener noreferrer"
+           href="http://homeassistant.local:8123/config/integrations/integration/ncsender">Find it in Home Assistant ↗</a><br>
+        It's on the ncSender integration page in Home Assistant: press <b>Configure</b> (the gear), and it's shown at the top.
+        With it, buttons talk to Home Assistant directly and work with the controller off or a job paused.
+        Leave it empty to send comment lines through the controller instead.
+      </p>
+      <label class="has-label" for="has-text">Switches</label>
+      <p class="has-note" style="margin-top:0">One per line: <code>Name, entity_id</code></p>
       <textarea id="has-text" spellcheck="false" placeholder="Chiller, switch.chiller&#10;Air assist, switch.air_assist&#10;Dust collector, switch.dust_collector"></textarea>
       <div class="has-row" style="margin-top:12px; align-items:center">
         <button type="button" class="has-btn has-plain" id="has-save">Save</button>
@@ -54,6 +82,8 @@
 (function () {
   var PLUGIN_ID = 'com.cncdocs.ha-switches';
   var ENTITY_RE = /^[a-z_][a-z0-9_]*\.[a-z0-9_]+$/;
+  var WEBHOOK_RE = /^https?:\/\/[^\s/]+(\/[^\s]*)?\/api\/webhook\/[A-Za-z0-9_-]+$/;
+  var POLL_MS = 3000;
 
   function apiBase() {
     try {
@@ -67,56 +97,22 @@
   }
   var BASE = apiBase();
   var SETTINGS_URL = BASE + '/api/plugins/' + PLUGIN_ID + '/settings';
+  var DRAFT_KEY = PLUGIN_ID + ':draft';
 
+  var root = document.getElementById('has-root');
   var grid = document.getElementById('has-switches');
   var text = document.getElementById('has-text');
+  var urlInput = document.getElementById('has-url');
   var editor = document.getElementById('has-editor');
   var saveStatus = document.getElementById('has-save-status');
-  var switches = [];
-  var root = document.getElementById('has-root');
-  var DRAFT_KEY = PLUGIN_ID + ':draft';
-  var savedText = '';
+  var routeEl = document.getElementById('has-route');
+  var haLink = document.getElementById('has-ha');
+  var noteEl = document.getElementById('has-note');
 
-  function store(fn) { try { return fn(window.localStorage); } catch (e) { return null; } }
-  function dirty() { return text.value !== savedText; }
-  function showDirty() {
-    if (dirty()) { saveStatus.className = 'has-status has-dirty'; saveStatus.textContent = 'Unsaved changes'; }
-  }
-
-  // ncSender closes a dialog on a click on its backdrop. Pressing inside this
-  // dialog (e.g. selecting text in the box) and releasing outside it counts as
-  // such a click, so edits were lost. Block that, and while there are unsaved
-  // edits block real backdrop clicks too (the X still closes).
-  var downInside = false;
-  function onDown(e) {
-    if (!document.contains(root)) return detach();
-    // Inside = anywhere but the backdrop, i.e. not on an element wrapping the dialog.
-    var t = e.target;
-    downInside = t instanceof Node && !(t !== root && t.contains(root) && !root.contains(t));
-  }
-  function onClick(e) {
-    if (!document.contains(root)) return detach();
-    var t = e.target;
-    var outside = t instanceof Element && !root.contains(t) && t.contains(root);
-    if (!outside) { downInside = false; return; }
-    if (downInside || dirty()) {
-      e.stopPropagation(); e.preventDefault();
-      if (!downInside) {
-        editor.style.display = '';
-        saveStatus.className = 'has-status has-dirty';
-        saveStatus.textContent = 'Unsaved changes: Save first, or close with × to discard';
-      }
-    }
-    downInside = false;
-  }
-  function detach() {
-    window.removeEventListener('pointerdown', onDown, true);
-    window.removeEventListener('mousedown', onDown, true);
-    window.removeEventListener('click', onClick, true);
-  }
-  window.addEventListener('pointerdown', onDown, true);
-  window.addEventListener('mousedown', onDown, true);
-  window.addEventListener('click', onClick, true);
+  var cfg = { switches: [], webhookUrl: '' };
+  var saved = { text: '', url: '' };
+  var cards = {};   // entity -> { state, on, off }
+  var pollTimer = null;
 
   function el(tag, cls, txt) {
     var e = document.createElement(tag);
@@ -124,6 +120,156 @@
     if (txt != null) e.textContent = txt;
     return e;
   }
+  function store(fn) { try { return fn(window.localStorage); } catch (e) { return null; } }
+  function alive() { return document.contains(root); }
+
+  // ---------- sending ----------
+
+  // Resolves { ok, state?, error? }; never rejects.
+  function send(sw, action) {
+    if (cfg.webhookUrl) {
+      return fetch(cfg.webhookUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },   // a "simple" request: no CORS preflight
+        body: JSON.stringify({ entity_id: sw.entity, action: action.toLowerCase() })
+      }).then(function (res) {
+        return res.json().catch(function () { return {}; }).then(function (b) {
+          if (!res.ok || !b.ok) return { ok: false, error: (b && b.error) || ('Home Assistant answered HTTP ' + res.status) };
+          return { ok: true, state: b.state };
+        });
+      }).catch(function () {
+        return { ok: false, error: 'Can’t reach Home Assistant. Check the webhook URL (and that the integration is v0.5.0b2 or newer).' };
+      });
+    }
+    var command = '(HA ' + sw.entity + ' ' + action + ')';
+    return fetch(BASE + '/api/send-command', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ command: command, displayCommand: command })
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; }).then(function (b) {
+        if (!res.ok) return { ok: false, error: (b && (b.error || b.message)) || ('HTTP ' + res.status) };
+        if (b && b.status === 'error') return { ok: false, error: b.message || 'ncSender refused the command' };
+        if (b && b.status === 'skipped') return { ok: false, error: b.reason || 'ncSender held the command (controller off or job paused?)' };
+        return { ok: true };
+      });
+    }).catch(function (err) { return { ok: false, error: String(err && err.message || err) }; });
+  }
+
+  // ---------- live states (webhook only) ----------
+
+  function showState(entity, state) {
+    var c = cards[entity];
+    if (!c) return;
+    c.state.textContent = state === 'on' ? 'On' : state === 'off' ? 'Off' : (state || '?');
+    c.state.className = 'has-state' + (state === 'on' ? ' is-on' : state === 'off' ? '' : ' is-bad');
+    c.on.classList.toggle('has-active', state === 'on');
+    c.off.classList.toggle('has-active', state === 'off');
+  }
+  function poll() {
+    if (!alive()) { clearInterval(pollTimer); pollTimer = null; return; }
+    if (!cfg.webhookUrl) return;
+    fetch(cfg.webhookUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain' }, body: '{"action":"states"}' })
+      .then(function (r) { return r.json(); })
+      .then(function (b) {
+        Object.keys(cards).forEach(function (entity) {
+          var s = b && b.states && b.states[entity];
+          showState(entity, s ? s.state : 'not allowed in HA');
+        });
+      })
+      .catch(function () { Object.keys(cards).forEach(function (e) { showState(e, 'no connection'); }); });
+  }
+  function startPolling() {
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = cfg.webhookUrl ? setInterval(poll, POLL_MS) : null;
+    poll();
+  }
+
+  // ---------- links ----------
+
+  // ncSender has no API to open its settings, so do what a person would: close
+  // this window, press the Settings gear, pick the Controls tab.
+  document.getElementById('has-shortcuts').addEventListener('click', function () {
+    var btn = this;
+    function fallback() {
+      if (!alive()) return;
+      btn.textContent = 'Open Settings (gear, top right) → Controls';
+    }
+    var gear = document.querySelector('button[title="Settings"]');
+    if (!gear || gear.disabled) return fallback();
+    var dlg = root.parentElement;
+    while (dlg && !(dlg.querySelector && dlg.querySelector('.dialog__close, [aria-label="Close dialog"], [aria-label="Close"]'))) dlg = dlg.parentElement;
+    var close = dlg && dlg.querySelector('.dialog__close, [aria-label="Close dialog"], [aria-label="Close"]');
+    if (close) close.click();
+    setTimeout(function () {
+      gear.click();
+      var tries = 0;
+      (function pick() {
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab-button, [role="tab"]'));
+        var tab = tabs.filter(function (t) {
+          var label = (t.querySelector('.tab-label') || t).textContent || '';
+          return /(Controls|Keyboard)/i.test(label);
+        })[0];
+        if (tab) return tab.click();
+        if (++tries < 20) setTimeout(pick, 100); else fallback();
+      })();
+    }, 150);
+  });
+
+  // ---------- rendering ----------
+
+  function render() {
+    grid.innerHTML = '';
+    cards = {};
+    var direct = !!cfg.webhookUrl;
+    routeEl.textContent = direct ? 'Direct to Home Assistant' : 'Through the controller (no webhook set)';
+    var origin = 'http://homeassistant.local:8123';
+    try { if (direct) origin = new URL(cfg.webhookUrl).origin; } catch (e) {}
+    haLink.href = origin + '/';
+    haLink.style.display = '';
+    noteEl.innerHTML = direct
+      ? 'Buttons talk to Home Assistant directly, so they work with the controller off or a job paused. Only devices allowed under <b>ncSender → Configure → Devices ncSender may switch</b> respond.'
+      : 'Each button sends a comment line such as <code>(HA switch.shop_lights ON)</code> through the controller, so it needs the controller connected and no job paused. Add the webhook URL under <b>Edit switches</b> to switch directly.';
+    if (!cfg.switches.length) {
+      var empty = el('div', 'has-empty', 'No switches yet. Tap “Edit switches” below and add one per line, e.g. ');
+      empty.appendChild(el('code', null, 'Chiller, switch.chiller'));
+      grid.appendChild(empty);
+      return;
+    }
+    cfg.switches.forEach(function (s) {
+      var card = el('div', 'has-card');
+      var head = el('div', 'has-head');
+      head.appendChild(el('div', 'has-name', s.name));
+      var state = el('span', 'has-state', '…');
+      if (!direct) state.style.display = 'none';
+      head.appendChild(state);
+      card.appendChild(head);
+      card.appendChild(el('div', 'has-entity', s.entity));
+      var row = el('div', 'has-row');
+      var on = el('button', 'has-btn has-on', 'On'); on.type = 'button';
+      var off = el('button', 'has-btn has-off', 'Off'); off.type = 'button';
+      row.appendChild(on); row.appendChild(off);
+      card.appendChild(row);
+      var status = el('div', 'has-status');
+      card.appendChild(status);
+      cards[s.entity] = { state: state, on: on, off: off };
+      function press(action) {
+        on.disabled = off.disabled = true;
+        status.className = 'has-status'; status.textContent = 'Sending…';
+        send(s, action).then(function (r) {
+          on.disabled = off.disabled = false;
+          status.className = 'has-status ' + (r.ok ? 'has-ok' : 'has-err');
+          status.textContent = r.ok ? 'Sent ' + action + ' ✓' : r.error;
+          if (r.ok && r.state) showState(s.entity, r.state);
+        });
+      }
+      on.addEventListener('click', function () { press('ON'); });
+      off.addEventListener('click', function () { press('OFF'); });
+      grid.appendChild(card);
+    });
+  }
+
+  // ---------- editing ----------
 
   function parseLines(raw) {
     var out = [], bad = [];
@@ -138,85 +284,95 @@
     });
     return { switches: out, bad: bad };
   }
-
   function toLines(list) {
     return list.map(function (s) { return s.name + ', ' + s.entity; }).join('\n');
   }
-
-  function send(entity, action, statusEl, buttons) {
-    var command = '(HA ' + entity + ' ' + action + ')';
-    buttons.forEach(function (b) { b.disabled = true; });
-    statusEl.className = 'has-status';
-    statusEl.textContent = 'Sending…';
-    fetch(BASE + '/api/send-command', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ command: command, displayCommand: command })
-    }).then(function (res) {
-      return res.json().catch(function () { return {}; }).then(function (body) {
-        if (!res.ok) throw new Error((body && (body.error || body.message)) || ('HTTP ' + res.status));
-        if (body && body.status === 'error') throw new Error(body.message || 'ncSender refused the command');
-        if (body && body.status === 'skipped') throw new Error(body.reason || 'ncSender skipped the command');
-        statusEl.className = 'has-status has-ok';
-        statusEl.textContent = 'Sent ' + action + ' ✓';
-      });
-    }).catch(function (err) {
-      statusEl.className = 'has-status has-err';
-      statusEl.textContent = String(err && err.message || err);
-    }).then(function () {
-      buttons.forEach(function (b) { b.disabled = false; });
+  function dirty() { return text.value !== saved.text || urlInput.value.trim() !== saved.url; }
+  function setStatus(cls, msg) { saveStatus.className = 'has-status ' + cls; saveStatus.textContent = msg; }
+  function onEdit() {
+    store(function (ls) {
+      if (dirty()) ls.setItem(DRAFT_KEY, JSON.stringify({ text: text.value, url: urlInput.value }));
+      else ls.removeItem(DRAFT_KEY);
     });
+    if (dirty()) setStatus('has-dirty', 'Unsaved changes'); else setStatus('', '');
   }
+  text.addEventListener('input', onEdit);
+  urlInput.addEventListener('input', onEdit);
 
-  function render() {
-    grid.innerHTML = '';
-    if (!switches.length) {
-      var empty = el('div', 'has-empty', 'No switches yet. Tap “Edit switches” below and add one per line, e.g. ');
-      empty.appendChild(el('code', null, 'Chiller, switch.chiller'));
-      grid.appendChild(empty);
-      return;
+  // "Find it in Home Assistant" goes to the ncSender integration page, on the HA
+  // address typed so far (homeassistant.local:8123 until one is entered).
+  var findLink = document.getElementById('has-find-url');
+  function updateFindLink() {
+    var origin = 'http://homeassistant.local:8123';
+    try { if (/^https?:\/\//.test(urlInput.value.trim())) origin = new URL(urlInput.value.trim()).origin; } catch (e) {}
+    findLink.href = origin + '/config/integrations/integration/ncsender';
+  }
+  urlInput.addEventListener('input', updateFindLink);
+
+  // ncSender closes a dialog on a click on its backdrop. Pressing inside this
+  // dialog (e.g. selecting text in the box) and releasing outside it counts as
+  // such a click, so edits were lost. Block that, and while there are unsaved
+  // edits block real backdrop clicks too (the X still closes).
+  var downInside = false;
+  function onDown(e) {
+    if (!alive()) return detach();
+    // Inside = anywhere but the backdrop, i.e. not on an element wrapping the dialog.
+    var t = e.target;
+    downInside = t instanceof Node && !(t !== root && t.contains(root) && !root.contains(t));
+  }
+  function onClick(e) {
+    if (!alive()) return detach();
+    var t = e.target;
+    var outside = t instanceof Element && !root.contains(t) && t.contains(root);
+    if (!outside) { downInside = false; return; }
+    if (downInside || dirty()) {
+      e.stopPropagation(); e.preventDefault();
+      if (!downInside) {
+        editor.style.display = '';
+        setStatus('has-dirty', 'Unsaved changes: Save first, or close with × to discard');
+      }
     }
-    switches.forEach(function (s) {
-      var card = el('div', 'has-card');
-      card.appendChild(el('div', 'has-name', s.name));
-      card.appendChild(el('div', 'has-entity', s.entity));
-      var row = el('div', 'has-row');
-      var on = el('button', 'has-btn has-on', 'On'); on.type = 'button';
-      var off = el('button', 'has-btn has-off', 'Off'); off.type = 'button';
-      row.appendChild(on); row.appendChild(off);
-      card.appendChild(row);
-      var status = el('div', 'has-status');
-      card.appendChild(status);
-      on.addEventListener('click', function () { send(s.entity, 'ON', status, [on, off]); });
-      off.addEventListener('click', function () { send(s.entity, 'OFF', status, [on, off]); });
-      grid.appendChild(card);
-    });
+    downInside = false;
+  }
+  function detach() {
+    window.removeEventListener('pointerdown', onDown, true);
+    window.removeEventListener('mousedown', onDown, true);
+    window.removeEventListener('click', onClick, true);
+  }
+  window.addEventListener('pointerdown', onDown, true);
+  window.addEventListener('mousedown', onDown, true);
+  window.addEventListener('click', onClick, true);
+
+  function apply(c) {
+    cfg = c;
+    saved.text = toLines(c.switches);
+    saved.url = c.webhookUrl;
+    render();
+    startPolling();
   }
 
   function load() {
     fetch(SETTINGS_URL).then(function (r) { return r.ok ? r.json() : {}; }).catch(function () { return {}; })
-      .then(function (cfg) {
-        switches = (cfg && Array.isArray(cfg.switches) ? cfg.switches : []).filter(function (s) {
-          return s && ENTITY_RE.test(String(s.entity || ''));
+      .then(function (raw) {
+        apply({
+          switches: (raw && Array.isArray(raw.switches) ? raw.switches : []).filter(function (s) {
+            return s && ENTITY_RE.test(String(s.entity || ''));
+          }).map(function (s) { return { name: s.name || s.entity, entity: s.entity }; }),
+          webhookUrl: raw && typeof raw.webhookUrl === 'string' && WEBHOOK_RE.test(raw.webhookUrl) ? raw.webhookUrl : ''
         });
-        savedText = toLines(switches);
-        text.value = savedText;
-        var draft = store(function (ls) { return ls.getItem(DRAFT_KEY); });
-        if (draft != null && draft !== savedText) {
-          text.value = draft;
+        text.value = saved.text;
+        urlInput.value = saved.url;
+        updateFindLink();
+        var draft =store(function (ls) { try { return JSON.parse(ls.getItem(DRAFT_KEY)); } catch (e) { return null; } });
+        if (draft && typeof draft.text === 'string' && (draft.text !== saved.text || (draft.url || '').trim() !== saved.url)) {
+          text.value = draft.text;
+          urlInput.value = draft.url || '';
           editor.style.display = '';
-          saveStatus.className = 'has-status has-dirty';
-          saveStatus.textContent = 'Restored unsaved edits';
+          setStatus('has-dirty', 'Restored unsaved edits');
         }
-        if (!switches.length) editor.style.display = '';
-        render();
+        if (!cfg.switches.length) editor.style.display = '';
       });
   }
-
-  text.addEventListener('input', function () {
-    store(function (ls) { if (dirty()) ls.setItem(DRAFT_KEY, text.value); else ls.removeItem(DRAFT_KEY); });
-    if (dirty()) showDirty(); else { saveStatus.className = 'has-status'; saveStatus.textContent = ''; }
-  });
 
   document.getElementById('has-toggle-edit').addEventListener('click', function () {
     editor.style.display = editor.style.display === 'none' ? '' : 'none';
@@ -224,29 +380,24 @@
 
   document.getElementById('has-save').addEventListener('click', function () {
     var parsed = parseLines(text.value);
-    if (parsed.bad.length) {
-      saveStatus.className = 'has-status has-err';
-      saveStatus.textContent = 'Not an entity ID on ' + parsed.bad.join(', ') + ' (expected e.g. switch.chiller)';
-      return;
-    }
-    saveStatus.className = 'has-status';
-    saveStatus.textContent = 'Saving…';
+    var url = urlInput.value.trim();
+    if (parsed.bad.length) return setStatus('has-err', 'Not an entity ID on ' + parsed.bad.join(', ') + ' (expected e.g. switch.chiller)');
+    if (url && !WEBHOOK_RE.test(url)) return setStatus('has-err', 'The webhook URL should look like http://homeassistant.local:8123/api/webhook/…');
+    setStatus('', 'Saving…');
+    var c = { switches: parsed.switches, webhookUrl: url };
     fetch(SETTINGS_URL, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ switches: parsed.switches })
+      body: JSON.stringify(c)
     }).then(function (r) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
-      switches = parsed.switches;
-      savedText = toLines(switches);
-      text.value = savedText;
+      apply(c);
+      text.value = saved.text;
+      urlInput.value = saved.url;
       store(function (ls) { ls.removeItem(DRAFT_KEY); });
-      render();
-      saveStatus.className = 'has-status has-ok';
-      saveStatus.textContent = 'Saved ✓';
+      setStatus('has-ok', 'Saved ✓');
     }).catch(function (err) {
-      saveStatus.className = 'has-status has-err';
-      saveStatus.textContent = 'Save failed: ' + (err && err.message || err);
+      setStatus('has-err', 'Save failed: ' + (err && err.message || err));
     });
   });
 

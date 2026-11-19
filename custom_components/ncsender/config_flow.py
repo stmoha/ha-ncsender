@@ -13,7 +13,9 @@ from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .client import NcSenderClient
+from .ha_switching import webhook_url
 from .const import (
+    CONF_WEBHOOK_ID,
     CONF_HA_SWITCHES,
     CONF_LASER_MAX_S,
     CONF_OUTPUT_PINS,
@@ -97,8 +99,11 @@ class NcSenderOptionsFlow(OptionsFlow):
             return self.async_create_entry(data=user_input)
 
         opts = self.config_entry.options
+        webhook_id = self.config_entry.data.get(CONF_WEBHOOK_ID)
+        url = webhook_url(self.hass, webhook_id) if webhook_id else "(reload the integration first)"
         return self.async_show_form(
             step_id="init",
+            description_placeholders={"webhook_url": url},
             data_schema=vol.Schema(
                 {
                     vol.Required(
