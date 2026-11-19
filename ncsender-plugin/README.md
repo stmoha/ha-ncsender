@@ -36,7 +36,8 @@ file you downloaded can't switch your other devices.
    Dust collector, switch.garage_dust_collector_shelly_1_gen4
    ```
 
-4. Press **On** / **Off**. With the webhook set, each card shows the device's state.
+4. With the webhook set, each device is a toggle showing its live state (refreshed every 3 s).
+   Without it, each device has **On** / **Off** buttons, since the plugin can't see the state.
 
 **Hold to press.** Add `, hold` to a line (e.g. `Controller power, switch.slb_ext, hold`) and
 both its buttons need a 1-second press, with a fill bar showing progress, like ncSender's own

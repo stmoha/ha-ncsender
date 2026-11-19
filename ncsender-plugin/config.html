@@ -27,6 +27,17 @@
     #has-root button.has-off { background: #616161 !important; }
     #has-root button.has-active { box-shadow: 0 0 0 3px #fff9 inset !important; }
     #has-root button.has-btn { position: relative; overflow: hidden; user-select: none; -webkit-user-select: none; touch-action: none; }
+    #has-root button.has-toggle { display: flex !important; align-items: center; gap: 14px; justify-content: flex-start !important;
+      background: #3a3f4b !important; color: #fff !important; text-align: left; }
+    #has-root button.has-toggle.is-on { background: #2e7d32 !important; }
+    #has-root button.has-toggle.is-bad { background: #7f1d1d !important; opacity: 0.85 !important; }
+    #has-root .has-track { position: relative; flex: 0 0 auto; width: 54px; height: 30px; border-radius: 999px; background: #0004;
+      box-shadow: inset 0 0 0 2px #fff6; transition: background 0.15s; }
+    #has-root .has-knob { position: absolute; top: 4px; left: 4px; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+      transition: left 0.15s; }
+    #has-root button.has-toggle.is-on .has-track { background: #fff3; }
+    #has-root button.has-toggle.is-on .has-knob { left: 28px; }
+    #has-root .has-tlabel { font-size: 1.05rem; }
     #has-root .has-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #fff4; pointer-events: none; }
     #has-root .has-fill.go { width: 100%; transition: width 1s linear; }
     #has-root .has-holdtag { font-family: inherit; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase;
@@ -169,6 +180,19 @@
   function showState(entity, state) {
     var c = cards[entity];
     if (!c) return;
+    c.current = state;
+    if (c.toggle) {
+      if (c.pending) return;
+      var known = state === 'on' || state === 'off';
+      c.toggle.classList.toggle('is-on', state === 'on');
+      c.toggle.classList.toggle('is-bad', !known && state != null);
+      c.toggle.setAttribute('aria-checked', state === 'on' ? 'true' : 'false');
+      c.label.textContent = state === 'on' ? 'On' : state === 'off' ? 'Off' : (state || '\u2026');
+      c.toggle.disabled = !known;
+      c.toggle.title = known ? (c.hold ? 'Press and hold for 1 second' : 'Switch ' + (state === 'on' ? 'off' : 'on'))
+                             : 'Home Assistant reports: ' + (state || 'unknown');
+      return;
+    }
     c.state.textContent = state === 'on' ? 'On' : state === 'off' ? 'Off' : (state || '?');
     c.state.className = 'has-state' + (state === 'on' ? ' is-on' : state === 'off' ? '' : ' is-bad');
     c.on.classList.toggle('has-active', state === 'on');
@@ -285,18 +309,45 @@
       var head = el('div', 'has-head');
       head.appendChild(el('div', 'has-name', s.name));
       var state = el('span', 'has-state', '…');
-      if (!direct) state.style.display = 'none';
+      state.style.display = 'none';   // fallback route has no state; direct shows it on the toggle
       head.appendChild(state);
       card.appendChild(head);
       var meta = el('div', 'has-entity', s.entity);
       if (s.hold) { var tag = el('span', 'has-holdtag', 'Hold'); tag.title = 'Press and hold for 1 second'; meta.appendChild(tag); }
       card.appendChild(meta);
+      var status = el('div', 'has-status');
+      if (direct) {
+        var toggle = el('button', 'has-btn has-toggle'); toggle.type = 'button';
+        toggle.setAttribute('role', 'switch'); toggle.setAttribute('aria-checked', 'false');
+        var track = el('span', 'has-track'); track.appendChild(el('span', 'has-knob'));
+        var label = el('span', 'has-tlabel', '…');
+        toggle.appendChild(track); toggle.appendChild(label);
+        toggle.disabled = true;   // until Home Assistant has told us the state
+        card.appendChild(toggle);
+        card.appendChild(status);
+        var c = cards[s.entity] = { state: state, toggle: toggle, label: label, hold: s.hold, current: null, pending: false };
+        var flip = function () {
+          if (c.current !== 'on' && c.current !== 'off') return;
+          var action = c.current === 'on' ? 'OFF' : 'ON';
+          c.pending = true; toggle.disabled = true;
+          label.textContent = action === 'ON' ? 'Switching on…' : 'Switching off…';
+          status.className = 'has-status'; status.textContent = '';
+          send(s, action).then(function (r) {
+            c.pending = false;
+            if (!r.ok) { status.className = 'has-status has-err'; status.textContent = r.error; }
+            showState(s.entity, r.ok && r.state ? r.state : c.current);
+          });
+        };
+        if (s.hold) holdToPress(toggle, flip, status);
+        else toggle.addEventListener('click', flip);
+        grid.appendChild(card);
+        return;
+      }
       var row = el('div', 'has-row');
       var on = el('button', 'has-btn has-on', 'On'); on.type = 'button';
       var off = el('button', 'has-btn has-off', 'Off'); off.type = 'button';
       row.appendChild(on); row.appendChild(off);
       card.appendChild(row);
-      var status = el('div', 'has-status');
       card.appendChild(status);
       cards[s.entity] = { state: state, on: on, off: off };
       function press(action) {

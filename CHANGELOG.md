@@ -32,6 +32,9 @@
   controller's power that shouldn't switch on a stray click.
 - Fixed (b3): the webhook dropped every browser request ("no connection" in the plugin). It set
   its own CORS header, which HA's CORS handling refuses; HA's webhook view already allows any origin.
+- HA Switches plugin 0.1.5: with the webhook set, each device is one toggle showing its live state
+  (hold switches need a 1-second press on the toggle); unavailable or not-allowed devices show red
+  and can't be pressed. Without a webhook the plugin keeps On/Off buttons, since it can't see state.
 
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
