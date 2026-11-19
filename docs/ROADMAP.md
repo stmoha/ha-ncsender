@@ -1,6 +1,6 @@
 # Roadmap
 
-Status as of 2026-11-18. Keep this current — it replaces chat history as the project's memory.
+Status as of 2026-11-19. Keep this current — it replaces chat history as the project's memory.
 
 ## In flight
 
