@@ -90,14 +90,37 @@ Settings → Devices & services → ncSender → **Configure**:
 - **Telemetry update interval** (default 5 s, range 1–60) — how often positions, RPM, feed rate,
   progress and time remaining update. State changes (job status, spindle/laser/coolant, alarms,
   tool, workspace) are always immediate regardless of this setting.
+- **Aux output pins exposed as switches** — see below.
+- **Devices ncSender may switch** — entities that `(HA <entity_id> ON|OFF|TOGGLE)` commands from
+  ncSender may control. Empty by default: nothing is switched until you pick something.
 
 ## Controlling Home Assistant devices from ncSender's screen
 
-grblHAL aux outputs don't have to be wired to anything — ncSender tracks `M64 Pn`/`M65 Pn` itself,
-so an unused pin number is a free virtual switch:
+### HA Switches plugin (v0.5.0+)
+
+Install the **HA Switches** ncSender plugin from its own repo, [stmoha/ncsender-plugin-ha-switches](https://github.com/stmoha/ncsender-plugin-ha-switches)
+(ZIP on the latest release),
+add your devices (`Chiller, switch.chiller`, one per line), and allow the same entities in
+Configure → *Devices ncSender may switch*. No automation, no aux pin, and no limit on how many.
+
+- **Direct (recommended):** copy the webhook URL shown at the top of Configure into the plugin's
+  *Home Assistant webhook URL*. Buttons then talk to HA directly and show each device's live state;
+  they work with the controller off, before homing, and while a job is paused. The webhook only
+  accepts requests from your local network and only switches the allowed devices.
+- **Through the controller:** without a webhook URL each button sends a comment line such as
+  `(HA switch.chiller ON)`; the controller ignores it and the integration switches the device once
+  it's acknowledged. Needs the controller connected and no job paused. The same comment works
+  inside a G-code file.
+
+### Aux output pins
+
+Each pin listed in options becomes `switch.ncsender_output_pN`, in step with ncSender's own
+Auxiliary I/O switch for that output. Only the board's **real, unclaimed** aux outputs work: grblHAL
+refuses higher numbers with `error:39` (on the SLB-EXT that leaves a few single-digit pins), so there
+are no free "virtual" pins. To switch HA devices without using a pin, use the HA Switches plugin above.
 
 1. **ncSender** → Settings → Advanced → Auxiliary I/O → *Add Output*: name it (e.g. "Shop Lights"),
-   pick an unused output such as `M64 P2`. You now have a button on the main screen.
+   pick a free output on your board such as `M64 P2`. You now have a button on the main screen.
 2. **Home Assistant** → ncSender → Configure → *Aux output pins exposed as switches*: `2`. After the
    reload, `switch.ncsender_output_p2` appears and follows that button.
 3. Mirror it onto the real device with one automation:

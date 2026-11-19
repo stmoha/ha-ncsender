@@ -1,5 +1,57 @@
 # Changelog
 
+## 0.5.0 — 2026-11-19 (after betas v0.5.0b1–b3)
+- **Switch HA devices from ncSender.** The integration now acts on comment lines of the form
+  `(HA <entity_id> ON|OFF|TOGGLE)` once the controller acknowledges them, calling
+  `homeassistant.turn_on` / `turn_off` / `toggle`. Only entities picked in the new option
+  *Devices ncSender may switch* (Configure; switches, lights, fans, input booleans, scripts) are
+  acted on, so a downloaded G-code file can't reach anything else. Works from the new
+  **HA Switches** ncSender plugin ([own repo](https://github.com/stmoha/ncsender-plugin-ha-switches)) and from comments inside a job.
+- Every such command fires an `ncsender_ha_command` event (`entity_id`, `service`, `allowed`)
+  for debugging and automations.
+- **Corrected:** the *Aux output pins* help text and readme no longer claim unused pin numbers work
+  as virtual switches. grblHAL refuses outputs the board doesn't have (`error:39`), so only real,
+  unclaimed outputs work. Use *Devices ncSender may switch* for HA devices instead.
+- Fixed "Translation error: UNCLOSED_TAG" under *Devices ncSender may switch* (the help text
+  contained `<entity_id>`, which HA's translation parser reads as a tag).
+- HA Switches plugin 0.1.1: pressing inside the dialog and releasing outside it no longer closes
+  it; with unsaved edits a backdrop click doesn't close it either (× still does); unsaved edits are
+  kept and restored when the dialog reopens; more padding; no overflow in narrow windows.
+- **Direct switching webhook (b2).** The integration registers a local-only webhook; its URL is
+  shown at the top of Configure. The HA Switches plugin posts to it directly, so its buttons work
+  with the controller off, before homing, in an alarm and while a job is paused. Same allowlist; no
+  HA token leaves Home Assistant. `{"action": "states"}` returns the allowed devices' states. The
+  `ncsender_ha_command` event gains `source` (`command` or `webhook`).
+- HA Switches plugin 0.1.2: *Home Assistant webhook URL* setting (with a link to the integration
+  page where it's shown), live on/off state per device, *Open Home Assistant* link, *Keyboard
+  shortcuts…* button that opens ncSender Settings → Controls, official Home Assistant icon.
+- HA Switches plugin 0.1.3: *Keyboard shortcuts…* also types "HA Switches" into the Controls search,
+  so only the plugin's row shows.
+- HA Switches plugin 0.1.4: optional hold-to-press per switch (`Name, entity_id, hold`). Both
+  buttons then need a 1-second press, like ncSender's own *Hold* outputs, for devices such as the
+  controller's power that shouldn't switch on a stray click.
+- Fixed (b3): the webhook dropped every browser request ("no connection" in the plugin). It set
+  its own CORS header, which HA's CORS handling refuses; HA's webhook view already allows any origin.
+- HA Switches plugin 0.1.5: with the webhook set, each device is one toggle showing its live state
+  (hold switches need a 1-second press on the toggle); unavailable or not-allowed devices show red
+  and can't be pressed. Without a webhook the plugin keeps On/Off buttons, since it can't see state.
+- HA Switches plugin 0.1.6: after a tap the toggle moves at once and pulses "Switching on…" until
+  Home Assistant reports the new state (checked every 0.5 s), instead of flicking back while a device
+  such as a Shelly catches up. If nothing changes within 10 s it goes back and says so.
+- HA Switches plugin 0.1.7: optional `slow` flag (`Name, entity_id, slow`, combinable with `hold`) for
+  devices that take a while to change, e.g. a compressor that finishes its cycle before powering off:
+  the toggle keeps pulsing for up to 15 minutes instead of giving up after 10 s.
+- HA Switches plugin 0.1.8: `#` notes in the switch list. Start a line with `#` to comment it out
+  (handy for test switches), or put a note after an entry. The list is now saved as typed, so notes
+  and commented-out lines survive Save.
+- HA Switches plugin 0.1.9: "Edit switches" is now an **Edit HA Switches settings** bar with a chevron
+  and a "Click to open / Click to close" hint, plus a *Close settings* button next to Save. The switch
+  list is coloured with ncSender's own editor colours (dark and light themes): names, entity IDs,
+  `hold`/`slow`, `#` notes, and anything that isn't an entity ID underlined in red, with a key below.
+- The HA Switches plugin moved to its own repo,
+  [stmoha/ncsender-plugin-ha-switches](https://github.com/stmoha/ncsender-plugin-ha-switches)
+  (history kept); its releases carry the install ZIP and feed ncSender's plugin updates.
+
 ## 0.4.1 — 2026-11-18
 - Example automation blueprints in `blueprints/automation/ncsender/`, with one-click import
   buttons in the README: shop equipment follows the job (spindle/laser aware), job alerts,

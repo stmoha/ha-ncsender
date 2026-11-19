@@ -14,6 +14,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .client import NcSenderClient, NcSenderError
+from .ha_switching import comment_handler, register_webhook
 from .const import (
     ATTR_COMMAND,
     ATTR_ENTRY_ID,
@@ -54,6 +55,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: NcSenderConfigEntry) -> 
         )
 
     entry.runtime_data = client
+    entry.async_on_unload(client.add_ha_command_listener(comment_handler(hass, entry)))
+    entry.async_on_unload(register_webhook(hass, entry))
     client.start()
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)

@@ -110,6 +110,55 @@ async def test_full_flow(hass, fake_ncsender):
     assert await hass.config_entries.async_unload(entry.entry_id)
     await hass.async_block_till_done()
 
+async def test_ha_switch_commands(hass, fake_ncsender, hass_client_no_auth):
+    """(HA <entity> ON|OFF|TOGGLE) comment commands call services for allowlisted entities only."""
+    from homeassistant.setup import async_setup_component
+    assert await async_setup_component(hass, "input_boolean", {"input_boolean": {"chiller": {}, "door_lock": {}}})
+    result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
+    result = await hass.config_entries.flow.async_configure(result["flow_id"],
+        {"host": "127.0.0.1", "port": 18091, "name": "ncSender", "laser_max_s": 1000})
+    entry = result["result"]
+    # options flow accepts the entity selector
+    flow = await hass.config_entries.options.async_init(entry.entry_id)
+    flow = await hass.config_entries.options.async_configure(flow["flow_id"],
+        {"laser_max_s": 1000, "telemetry_interval": 5, "output_pins": "", "ha_switches": ["input_boolean.chiller"]})
+    assert flow["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done(); await asyncio.sleep(0.3)
+    events = []
+    hass.bus.async_listen("ncsender_ha_command", lambda e: events.append(dict(e.data)))
+    ws = fake_ncsender["ws"]
+    async def send(d):
+        await ws.send_str(json.dumps({"type": "cnc-command-result", "data": d}))
+        await asyncio.sleep(0.05); await hass.async_block_till_done()
+    # ncSender upper-cases the command; displayCommand keeps the original text
+    await send({"command": "(HA INPUT_BOOLEAN.CHILLER ON)", "displayCommand": "(HA input_boolean.chiller ON)", "status": "success"})
+    assert hass.states.get("input_boolean.chiller").state == "on"
+    await send({"command": "N40 (HA INPUT_BOOLEAN.CHILLER TOGGLE)", "status": "success"})  # job line
+    assert hass.states.get("input_boolean.chiller").state == "off"
+    await send({"command": "(HA INPUT_BOOLEAN.CHILLER ON)", "status": "error"})  # not acknowledged
+    assert hass.states.get("input_boolean.chiller").state == "off"
+    await send({"command": "(HA INPUT_BOOLEAN.DOOR_LOCK ON)", "status": "success"})  # not allowlisted
+    assert hass.states.get("input_boolean.door_lock").state == "off"
+    assert events[-1] == {"entity_id": "input_boolean.door_lock", "service": "turn_on", "allowed": False, "source": "command"}
+    assert len(events) == 3
+    # the plugin's direct webhook: same allowlist, works without the controller
+    webhook_id = entry.data["webhook_id"]
+    client = await hass_client_no_auth()
+    url = f"/api/webhook/{webhook_id}"
+    # as a browser on ncSender's page sends it: text/plain, with an Origin header
+    resp = await client.post(url, data=json.dumps({"entity_id": "input_boolean.chiller", "action": "on"}),
+                             headers={"Content-Type": "text/plain", "Origin": "http://ncsender:8090"})
+    assert resp.status == 200 and resp.headers.get("Access-Control-Allow-Origin") in ("*", "http://ncsender:8090")
+    assert (await resp.json())["ok"] is True
+    assert hass.states.get("input_boolean.chiller").state == "on"
+    resp = await client.post(url, data=json.dumps({"entity_id": "input_boolean.door_lock", "action": "on"}))
+    assert resp.status == 403 and hass.states.get("input_boolean.door_lock").state == "off"
+    resp = await client.post(url, data=json.dumps({"action": "states"}))
+    assert (await resp.json())["states"]["input_boolean.chiller"]["state"] == "on"
+    assert events[-1]["source"] == "webhook"
+    assert await hass.config_entries.async_unload(entry.entry_id)
+    await hass.async_block_till_done()
+
 async def test_cannot_connect(hass, socket_enabled):
     result = await hass.config_entries.flow.async_init(DOMAIN, context={"source": SOURCE_USER})
     result = await hass.config_entries.flow.async_configure(result["flow_id"],

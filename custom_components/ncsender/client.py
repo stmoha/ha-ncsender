@@ -57,6 +57,23 @@ IMMEDIATE_KEYS = frozenset(
 
 _M_CODE = re.compile(r"(?<![A-Za-z0-9.])M0*(\d+)(?!\d)", re.IGNORECASE)
 _T_WORD = re.compile(r"(?<![A-Za-z])T\s*0*(\d+)", re.IGNORECASE)
+# "(HA switch.shop_lights ON)": a comment-only line, which grblHAL acknowledges
+# as a no-op. Sent by the HA Switches ncSender plugin, or written into a job.
+# ncSender upper-cases what it sends, so match case-insensitively and lower-case
+# the entity ID; a job line carries an N-number prefix.
+_HA_COMMAND = re.compile(
+    r"^\s*(?:N\d+\s*)?\(\s*HA\s+([a-z_][a-z0-9_]*\.[a-z0-9_]+)\s+(ON|OFF|TOGGLE)\s*\)\s*$",
+    re.IGNORECASE,
+)
+HA_ACTIONS = {"ON": "turn_on", "OFF": "turn_off", "TOGGLE": "toggle"}
+
+
+def parse_ha_command(text: str) -> tuple[str, str] | None:
+    """Return (entity_id, service) for an "(HA <entity_id> ON|OFF|TOGGLE)" line."""
+    m = _HA_COMMAND.match(text or "")
+    if not m:
+        return None
+    return m.group(1).lower(), HA_ACTIONS[m.group(2).upper()]
 
 
 def _q(value: float, step: float) -> float | int:
@@ -93,6 +110,7 @@ class NcSenderClient:
         self.last_tool_change: dict[str, Any] | None = None  # set on each acknowledged M6
 
         self._listeners: set[Callable[[], None]] = set()
+        self._ha_command_listeners: set[Callable[[str, str], None]] = set()
         self._task: asyncio.Task | None = None
         self._ws: aiohttp.ClientWebSocketResponse | None = None
         self._last_push = 0.0
@@ -104,6 +122,19 @@ class NcSenderClient:
 
         def _remove() -> None:
             self._listeners.discard(callback)
+
+        return _remove
+
+    def add_ha_command_listener(
+        self, callback: Callable[[str, str], None]
+    ) -> Callable[[], None]:
+        """Call back with (entity_id, service) for each acknowledged
+        "(HA <entity_id> ON|OFF|TOGGLE)" command. The client doesn't filter:
+        the integration applies its allowlist."""
+        self._ha_command_listeners.add(callback)
+
+        def _remove() -> None:
+            self._ha_command_listeners.discard(callback)
 
         return _remove
 
@@ -203,6 +234,7 @@ class NcSenderClient:
                 command = str(payload.get("command") or "")
                 self._track_coolant_command(command, str(payload.get("displayCommand") or ""))
                 self._track_tool_change_command(command)
+                self._dispatch_ha_command(command, str(payload.get("displayCommand") or ""))
                 self._publish()
         elif mtype == "cnc-error":
             self._alarm = payload if isinstance(payload, str) else json.dumps(payload)
@@ -263,6 +295,16 @@ class NcSenderClient:
             "previous_tool": (self.state.get("machineState") or {}).get("tool"),
             "command": command.strip(),
         }
+
+    def _dispatch_ha_command(self, command: str, display: str) -> None:
+        parsed = parse_ha_command(display) or parse_ha_command(command)
+        if parsed is None:
+            return
+        for callback in list(self._ha_command_listeners):
+            try:
+                callback(*parsed)
+            except Exception:  # noqa: BLE001 - one bad listener mustn't drop the stream
+                _LOGGER.exception("HA command listener failed for %s", parsed)
 
     # ------------------------------------------------------------------ derivation
     @staticmethod
@@ -350,8 +392,8 @@ class NcSenderClient:
             },
             # Telemetry is quantized: RPM/feed to 10s, positions to 0.01 mm,
             # so sensor jitter doesn't generate recorder rows.
-            # ncSender tracks M64/M65 itself and reports the ON pins here; a pin
-            # need not be wired to anything, so these double as virtual switches.
+            # ncSender tracks M64/M65 itself and reports the ON pins here. Only the
+            # board's real unclaimed outputs get here: grblHAL refuses others (error:39).
             "output_pins": sorted(int(p) for p in (ms.get("outputPinsState") or []) if str(p).isdigit()),
             "tool_change": (self.last_tool_change or {}).get("at"),
             "tool_change_attributes": self.last_tool_change or {},

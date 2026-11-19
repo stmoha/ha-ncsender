@@ -9,10 +9,14 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_NAME, CONF_PORT
 from homeassistant.core import callback
+from homeassistant.helpers import selector
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .client import NcSenderClient
+from .ha_switching import webhook_url
 from .const import (
+    CONF_WEBHOOK_ID,
+    CONF_HA_SWITCHES,
     CONF_LASER_MAX_S,
     CONF_OUTPUT_PINS,
     CONF_TELEMETRY_INTERVAL,
@@ -23,6 +27,7 @@ from .const import (
     DEFAULT_PORT,
     DEFAULT_TELEMETRY_INTERVAL,
     DOMAIN,
+    HA_SWITCH_DOMAINS,
     MAX_TELEMETRY_INTERVAL,
     MIN_TELEMETRY_INTERVAL,
 )
@@ -94,8 +99,11 @@ class NcSenderOptionsFlow(OptionsFlow):
             return self.async_create_entry(data=user_input)
 
         opts = self.config_entry.options
+        webhook_id = self.config_entry.data.get(CONF_WEBHOOK_ID)
+        url = webhook_url(self.hass, webhook_id) if webhook_id else "(reload the integration first)"
         return self.async_show_form(
             step_id="init",
+            description_placeholders={"webhook_url": url},
             data_schema=vol.Schema(
                 {
                     vol.Required(
@@ -109,6 +117,12 @@ class NcSenderOptionsFlow(OptionsFlow):
                         CONF_OUTPUT_PINS,
                         default=opts.get(CONF_OUTPUT_PINS, DEFAULT_OUTPUT_PINS),
                     ): str,
+                    vol.Optional(
+                        CONF_HA_SWITCHES,
+                        default=opts.get(CONF_HA_SWITCHES, []),
+                    ): selector.EntitySelector(
+                        selector.EntitySelectorConfig(domain=HA_SWITCH_DOMAINS, multiple=True)
+                    ),
                 }
             ),
         )
